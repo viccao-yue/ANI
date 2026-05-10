@@ -1,0 +1,53 @@
+# Local environment and secrets
+.env
+.env.local
+.env.*.local
+
+# Build outputs and generated local binaries
+bin/
+repo/bin/
+dist/
+build/
+*.test
+coverage.out
+coverage.html
+
+# Go local caches
+repo/.bin/
+repo/.cache/
+vendor/
+
+# Python caches and virtualenvs
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / package managers
+node_modules/
+.pnpm-store/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS / office temporary files
+.DS_Store
+Thumbs.db
+~$*
+
+# Certificates and private keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+cosign.key
+
+# Test temporary files
+/tmp/
+testdata/*/output/

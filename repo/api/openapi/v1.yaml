@@ -1,0 +1,733 @@
+openapi: 3.1.0
+
+info:
+  title: KuberCloud ANI API
+  version: 1.0.0
+  description: |
+    KuberCloud ANI (AI专有云) 统一 REST API。
+    所有接口通过 ANI Gateway 暴露，内部服务通过 gRPC 通信。
+
+    ## 认证
+    Bearer JWT（1小时有效）或 X-API-Key Header。
+    tenant_id 从 JWT claims 提取，请求体中的 tenant_id 字段将被忽略。
+
+    ## 错误格式
+    所有错误响应统一为 ErrorResponse schema：
+    `{ code: string, message: string, request_id: string, details?: object }`
+
+    ## 标准错误码
+    - `UNAUTHORIZED` – 未认证或 Token 无效
+    - `FORBIDDEN` – 有认证但无权限
+    - `NOT_FOUND` – 资源不存在
+    - `CONFLICT` – 资源已存在（如同名模型）
+    - `BAD_REQUEST` – 请求参数不合法
+    - `RATE_LIMIT_EXCEEDED` – 超出速率限制
+    - `NOT_IMPLEMENTED` – 功能尚未实现（Stub 期间）
+    - `INTERNAL_ERROR` – 服务内部错误（不暴露细节）
+
+    ## 分页
+    所有列表接口使用 cursor 分页（不使用 offset）：
+    `?limit=20&cursor=<opaque_token>` → 返回 `{ items: [], next_cursor: string | null }`
+
+    ## 异步操作
+    返回 202 的接口统一在响应体返回 `AsyncTask`，并在 `Location` Header 中附上任务 URL。
+    客户端轮询 `GET /api/v1/tasks/{task_id}` 或配置 Webhook 接收完成通知。
+
+    ## SSE 流式推理
+    流式推理使用独立端点 `GET /v1/inference/stream`（不与 JSON 接口混用同一路径），
+    避免 SDK 生成工具在同一 path 下的响应类型冲突。
+
+servers:
+  - url: https://{host}/api/v1
+    variables:
+      host:
+        default: ani.internal
+        description: ANI Gateway 地址（支持IP地址）
+
+# ── 认证方式 ─────────────────────────────────────────────────────────────────
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT AccessToken（有效期1小时，通过 /auth/token 获取）
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: 长期 API Key（在 Console → 设置 → API Key 中创建）
+
+security:
+  - BearerAuth: []
+  - ApiKeyAuth: []
+
+# ── 公共 Schema ───────────────────────────────────────────────────────────────
+  schemas:
+
+    # 所有错误响应的统一格式
+    ErrorResponse:
+      type: object
+      required: [code, message, request_id]
+      properties:
+        code:        { type: string, example: "MODEL_NOT_FOUND" }
+        message:     { type: string, example: "模型 qwen2.5-72b 不存在" }
+        request_id:  { type: string, example: "req_01j8xabc" }
+        details:     { type: object, additionalProperties: true }
+
+    # Cursor 分页（所有列表接口统一使用此格式）
+    CursorPage:
+      type: object
+      required: [items, total]
+      properties:
+        total:       { type: integer, description: "总记录数（用于显示）", example: 42 }
+        next_cursor: { type: string, nullable: true, description: "下一页游标；null 表示已到最后一页" }
+
+    # 异步任务（统一格式，202 响应一律返回此 schema）
+    AsyncTask:
+      type: object
+      required: [id, idempotency_key, task_type, status, created_at]
+      properties:
+        id:               { type: string, format: uuid }
+        idempotency_key:  { type: string, description: "客户端提供的幂等键" }
+        task_type:        { type: string, example: "model.import",
+                            enum: [model.import, kb.parse, kb.index, inference.deploy] }
+        resource_type:    { type: string, nullable: true,
+                            enum: [inference_service, kb_document, model_version] }
+        resource_id:      { type: string, format: uuid, nullable: true }
+        status:           { type: string,
+                            enum: [pending, running, completed, failed, cancelled, dead_letter] }
+        attempt_count:    { type: integer, minimum: 0 }
+        max_attempts:     { type: integer, minimum: 1 }
+        progress_pct:     { type: integer, minimum: 0, maximum: 100 }
+        result:           { type: object, nullable: true }
+        error_message:    { type: string, nullable: true }
+        dead_letter_at:   { type: string, format: date-time, nullable: true }
+        created_at:       { type: string, format: date-time }
+        completed_at:     { type: string, format: date-time, nullable: true }
+
+    # 模型
+    Model:
+      type: object
+      required: [id, name, display_name, source, status, created_at]
+      properties:
+        id:           { type: string, format: uuid }
+        name:         { type: string, example: "qwen2.5-72b" }
+        display_name: { type: string, example: "Qwen2.5 72B Instruct" }
+        description:  { type: string }
+        source:       { type: string, enum: [upload, huggingface, modelscope, builtin] }
+        capabilities: { type: array, items: { type: string }, example: ["text-generation"] }
+        status:       { type: string, enum: [pending, downloading, ready, error, deleted] }
+        total_size_bytes: { type: integer }
+        created_at:   { type: string, format: date-time }
+
+    ModelVersion:
+      type: object
+      required: [id, model_id, version, format, created_at]
+      properties:
+        id:           { type: string, format: uuid }
+        model_id:     { type: string, format: uuid }
+        version:      { type: string, example: "v1" }
+        format:       { type: string, enum: [safetensors, gguf, pytorch] }
+        is_encrypted: { type: boolean, default: false }
+        encrypt_algo: { type: string, enum: [sm4, zuc, aes256gcm] }
+        encrypt_hint: { type: string, description: "用户自定义密钥提示" }
+        size_bytes:   { type: integer }
+        created_at:   { type: string, format: date-time }
+
+    # 推理服务
+    InferenceService:
+      type: object
+      required: [id, name, model, status, created_at]
+      properties:
+        id:           { type: string, format: uuid }
+        name:         { type: string, example: "qwen2.5-72b-prod" }
+        model:        { type: string, example: "qwen2.5-72b:v1" }
+        replicas:     { type: integer, default: 1 }
+        gpu_type:     { type: string, example: "A100" }
+        gpu_count_per_pod: { type: integer, default: 1 }
+        max_concurrency: { type: integer, default: 8 }
+        placement:
+          type: object
+          properties:
+            region: { type: string }
+            az:     { type: string }
+        status:
+          type: string
+          enum: [pending, downloading, decrypting, deploying, running, stopping, stopped, failed]
+        endpoint_url: { type: string, description: "运行中时的内部调用地址" }
+        created_at:   { type: string, format: date-time }
+
+    # 知识库
+    KnowledgeBase:
+      type: object
+      required: [id, name, status, created_at]
+      properties:
+        id:              { type: string, format: uuid }
+        name:            { type: string, example: "人事制度知识库" }
+        description:     { type: string }
+        embedding_model: { type: string, default: "bge-m3" }
+        chunk_size:      { type: integer, default: 512 }
+        top_k:           { type: integer, default: 5 }
+        doc_count:       { type: integer }
+        status:          { type: string, enum: [active, rebuilding, deleted] }
+        created_at:      { type: string, format: date-time }
+
+    KBDocument:
+      type: object
+      required: [id, kb_id, file_name, parse_status, created_at]
+      properties:
+        id:           { type: string, format: uuid }
+        kb_id:        { type: string, format: uuid }
+        file_name:    { type: string }
+        file_type:    { type: string, enum: [pdf, docx, xlsx, pptx, txt, md] }
+        file_size_bytes: { type: integer }
+        parse_status: { type: string, enum: [pending, parsing, indexing, ready, failed] }
+        chunk_count:  { type: integer }
+        created_at:   { type: string, format: date-time }
+
+    KBQueryResponse:
+      type: object
+      required: [answer, sources]
+      properties:
+        answer:
+          type: string
+          description: LLM 生成的回答
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              doc_id:    { type: string, format: uuid }
+              file_name: { type: string }
+              page:      { type: integer }
+              content:   { type: string, description: "引用的原文片段" }
+              score:     { type: number, format: float }
+        session_id:      { type: string, format: uuid }
+        input_tokens:    { type: integer }
+        output_tokens:   { type: integer }
+
+  # 公共响应
+  responses:
+    Unauthorized:
+      description: 未认证或 Token 无效（code=UNAUTHORIZED）
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Forbidden:
+      description: 无权访问该资源（code=FORBIDDEN）
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    NotFound:
+      description: 资源不存在（code=NOT_FOUND）
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    BadRequest:
+      description: 请求参数不合法（code=BAD_REQUEST）
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    Conflict:
+      description: 资源已存在或冲突（code=CONFLICT）
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+    RateLimitExceeded:
+      description: 超出速率限制（code=RATE_LIMIT_EXCEEDED）
+      headers:
+        Retry-After:
+          schema: { type: integer }
+          description: "建议等待的秒数"
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+# ── API 路径定义 ──────────────────────────────────────────────────────────────
+paths:
+
+  # ── 认证 ────────────────────────────────────────────────────────────────────
+  /auth/token:
+    post:
+      summary: 获取 AccessToken（用户名密码登录）
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                properties:
+                  access_token:  { type: string }
+                  refresh_token: { type: string }
+                  expires_in:    { type: integer, example: 3600 }
+        "401":
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/refresh:
+    post:
+      summary: 刷新 AccessToken
+      tags: [Auth]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        "200":
+          description: 刷新成功
+          content:
+            application/json:
+              schema:
+                properties:
+                  access_token: { type: string }
+                  expires_in:   { type: integer }
+
+  # ── 平台品牌化 ──────────────────────────────────────────────────────────────
+  /branding:
+    get:
+      summary: 获取平台品牌配置
+      tags: [Branding]
+      security: []     # 无需认证，首屏加载需要
+      responses:
+        "200":
+          description: 品牌配置
+          content:
+            application/json:
+              schema:
+                properties:
+                  platform_name:  { type: string }
+                  logo_light_url: { type: string, format: uri }
+                  logo_dark_url:  { type: string, format: uri }
+                  favicon_url:    { type: string, format: uri }
+                  primary_color:  { type: string, example: "#1677FF" }
+                  secondary_color:{ type: string }
+                  icp_number:     { type: string }
+
+  # ── 模型管理 ────────────────────────────────────────────────────────────────
+  /models:
+    get:
+      operationId: listModels
+      summary: 获取模型列表
+      tags: [Models]
+      parameters:
+        - { name: status, in: query, schema: { type: string,
+            enum: [pending, downloading, ready, error, deleted] } }
+        - { name: limit, in: query, schema: { type: integer, default: 20, minimum: 1, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string }, description: "上一页返回的 next_cursor" }
+      responses:
+        "200":
+          description: 模型列表
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/CursorPage'
+                  - properties:
+                      items: { type: array, items: { $ref: '#/components/schemas/Model' } }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "403": { $ref: '#/components/responses/Forbidden' }
+
+    post:
+      operationId: createModel
+      summary: 创建模型元数据记录（上传文件前必须先调用此接口）
+      tags: [Models]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [name, display_name]
+              properties:
+                name:
+                  type: string
+                  pattern: '^[a-z0-9][a-z0-9.-]{0,62}$'
+                  description: "模型唯一标识（仅小写字母/数字/点/连字符，1-63字符）"
+                display_name: { type: string, minLength: 1, maxLength: 128 }
+                description:  { type: string, maxLength: 1024 }
+                capabilities:
+                  type: array
+                  items: { type: string, enum: [text-generation, embedding, speech-to-text] }
+      responses:
+        "201":
+          description: 模型记录已创建
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Model' }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "409": { $ref: '#/components/responses/Conflict' }
+
+  /models/import:
+    post:
+      operationId: importModel
+      summary: 从 HuggingFace 或 ModelScope 异步导入模型
+      description: |
+        提交后立即返回 202 和 AsyncTask。
+        客户端应轮询 GET /api/v1/tasks/{task_id} 或配置 webhook_url 接收完成通知。
+        使用 idempotency_key 防止重复导入：相同 key 的第二次调用直接返回已有任务。
+      tags: [Models]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [source, repo_id, idempotency_key]
+              properties:
+                source:
+                  type: string
+                  enum: [huggingface, modelscope]
+                repo_id:
+                  type: string
+                  example: "Qwen/Qwen2.5-72B-Instruct"
+                  minLength: 3
+                  maxLength: 256
+                revision:
+                  type: string
+                  default: "main"
+                  description: "分支/Tag/commit hash，默认 main"
+                idempotency_key:
+                  type: string
+                  maxLength: 128
+                  description: "客户端生成的唯一键，防止重复提交"
+                webhook_url:
+                  type: string
+                  format: uri
+                  description: "任务完成后回调的 URL（可选）"
+      responses:
+        "202":
+          description: 导入任务已提交
+          headers:
+            Location:
+              schema: { type: string }
+              description: "GET /api/v1/tasks/{task_id} 的完整路径"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AsyncTask' }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+
+  /models/{model_id}:
+    get:
+      summary: 获取模型详情
+      tags: [Models]
+      parameters:
+        - { name: model_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Model' }
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: 删除模型
+      tags: [Models]
+      parameters:
+        - { name: model_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "204":
+          description: 已删除
+
+  /models/{model_id}/versions:
+    post:
+      summary: 上传模型版本（分片上传完成后调用）
+      tags: [Models]
+      parameters:
+        - { name: model_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [version, format, storage_path, checksum_sha256, size_bytes]
+              properties:
+                version:         { type: string }
+                format:          { type: string, enum: [safetensors, gguf, pytorch] }
+                storage_path:    { type: string }
+                checksum_sha256: { type: string }
+                size_bytes:      { type: integer }
+                is_encrypted:    { type: boolean, default: false }
+                encrypt_algo:    { type: string }
+                encrypt_hint:    { type: string }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ModelVersion' }
+
+  # ── 推理服务 ────────────────────────────────────────────────────────────────
+  /inference-services:
+    get:
+      summary: 获取推理服务列表
+      tags: [InferenceServices]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/InferenceService' } }
+
+    post:
+      summary: 部署推理服务（异步）
+      tags: [InferenceServices]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [name, model]
+              properties:
+                name:              { type: string }
+                model:             { type: string, description: "格式: name:version" }
+                replicas:          { type: integer, default: 1 }
+                gpu_type:          { type: string }
+                gpu_count_per_pod: { type: integer, default: 1 }
+                max_concurrency:   { type: integer, default: 8 }
+                placement:
+                  type: object
+                  properties:
+                    region: { type: string }
+                    az:     { type: string }
+                encryption_key_secret:
+                  type: string
+                  description: "K8s Secret 名称，含模型解密密钥（加密模型必填）"
+      responses:
+        "202":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InferenceService' }
+
+  /inference-services/{service_id}:
+    get:
+      summary: 获取推理服务详情
+      tags: [InferenceServices]
+      parameters:
+        - { name: service_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InferenceService' }
+
+    delete:
+      summary: 停止并删除推理服务
+      tags: [InferenceServices]
+      parameters:
+        - { name: service_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "202":
+          description: 停止任务已提交
+
+  # ── 知识库 ──────────────────────────────────────────────────────────────────
+  /knowledge-bases:
+    get:
+      summary: 知识库列表
+      tags: [KnowledgeBases]
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/KnowledgeBase' } }
+
+    post:
+      summary: 创建知识库
+      tags: [KnowledgeBases]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [name]
+              properties:
+                name:            { type: string }
+                description:     { type: string }
+                embedding_model: { type: string, default: "bge-m3" }
+                chunk_size:      { type: integer, default: 512 }
+                top_k:           { type: integer, default: 5 }
+      responses:
+        "201":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeBase' }
+
+  /knowledge-bases/{kb_id}/documents:
+    get:
+      summary: 文档列表
+      tags: [KnowledgeBases]
+      parameters:
+        - { name: kb_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/KBDocument' } }
+
+    post:
+      summary: 上传文档（multipart/form-data）
+      tags: [KnowledgeBases]
+      parameters:
+        - { name: kb_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        "202":
+          description: 文档已上传，解析任务进行中
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KBDocument' }
+
+  /knowledge-bases/{kb_id}/query:
+    post:
+      operationId: queryKnowledgeBase
+      summary: 知识库问答（JSON，非流式）
+      description: |
+        混合 RAG 问答：向量检索 + 关键词检索 + RRF 融合 + LLM 生成。
+        当所有候选 chunk 的相关性分数均低于 score_threshold 时，
+        返回 `{ answer: "未找到相关内容，请联系管理员确认。", sources: [] }`
+        而不是编造答案。
+        流式版本请使用 GET /knowledge-bases/{kb_id}/query/stream
+      tags: [KnowledgeBases]
+      parameters:
+        - { name: kb_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              required: [question, idempotency_key]
+              properties:
+                question:
+                  type: string
+                  minLength: 1
+                  maxLength: 2000
+                  example: "差旅报销标准是什么？"
+                session_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: "多轮对话会话 ID；为空时创建新会话"
+                idempotency_key:
+                  type: string
+                  maxLength: 128
+                  description: "防止重复提交同一问题（网络重试时避免重复计费）"
+                top_k:
+                  type: integer
+                  default: 5
+                  minimum: 1
+                  maximum: 20
+                score_threshold:
+                  type: number
+                  format: float
+                  default: 0.3
+                  minimum: 0.0
+                  maximum: 1.0
+      responses:
+        "200":
+          description: JSON 格式的问答结果
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KBQueryResponse' }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+        "404": { $ref: '#/components/responses/NotFound' }
+
+  # SSE 流式问答使用独立端点，避免同一 path 混用 JSON 和 event-stream（SDK 生成会混乱）
+  /knowledge-bases/{kb_id}/query/stream:
+    get:
+      operationId: streamQueryKnowledgeBase
+      summary: 知识库问答（SSE 流式，适合长回答和前端打字机效果）
+      tags: [KnowledgeBases]
+      parameters:
+        - { name: kb_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: question, in: query, required: true, schema: { type: string, minLength: 1, maxLength: 2000 } }
+        - { name: session_id, in: query, schema: { type: string, format: uuid } }
+        - { name: top_k, in: query, schema: { type: integer, default: 5, minimum: 1, maximum: 20 } }
+      responses:
+        "200":
+          description: |
+            SSE 流。每个事件格式：`data: {"delta": "...", "done": false}`
+            最后一个事件：`data: {"done": true, "sources": [...], "session_id": "..."}`
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "400": { $ref: '#/components/responses/BadRequest' }
+        "401": { $ref: '#/components/responses/Unauthorized' }
+
+  # ── 异步任务 ────────────────────────────────────────────────────────────────
+  /tasks/{task_id}:
+    get:
+      summary: 查询异步任务状态
+      tags: [Tasks]
+      parameters:
+        - { name: task_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AsyncTask' }
+        "404":
+          $ref: '#/components/responses/NotFound'
+
+  # ── 计量 ────────────────────────────────────────────────────────────────────
+  /metering/usage:
+    get:
+      summary: 查询租户用量统计
+      tags: [Metering]
+      parameters:
+        - { name: start_time, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: end_time,   in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: resource_type, in: query, schema: { type: string } }
+        - { name: group_by, in: query, schema: { type: string, enum: [resource_type, az, day, hour] } }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        resource_type: { type: string }
+                        total_quantity: { type: number }
+                        unit:           { type: string }
+                        period:         { type: string }
+
+# ── Tag 分组（Swagger UI 显示顺序）──────────────────────────────────────────
+tags:
+  - { name: Auth,              description: "认证与授权" }
+  - { name: Branding,          description: "平台品牌化配置" }
+  - { name: Models,            description: "模型仓库管理" }
+  - { name: InferenceServices, description: "推理服务部署与管理" }
+  - { name: KnowledgeBases,    description: "知识库与 RAG 问答" }
+  - { name: Tasks,             description: "异步任务查询" }
+  - { name: Metering,          description: "计量与用量统计" }

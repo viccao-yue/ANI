@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package auth.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/kubercloud/ani/pkg/generated/pb/auth/v1;authv1";
+
+// AuthService handles authentication and authorization.
+service AuthService {
+  rpc Login(LoginRequest) returns (TokenPair);
+  rpc RefreshToken(RefreshTokenRequest) returns (AccessToken);
+  rpc RevokeToken(RevokeTokenRequest) returns (google.protobuf.Empty);
+
+  // ValidateToken is called internally by the ANI Gateway Auth middleware.
+  // Returns the TenantContext if the token is valid; returns UNAUTHENTICATED otherwise.
+  rpc ValidateToken(ValidateTokenRequest) returns (common.v1.TenantContext);
+
+  // CheckPermission is called by the RBAC middleware.
+  rpc CheckPermission(CheckPermissionRequest) returns (CheckPermissionResponse);
+
+  rpc CreateAPIKey(CreateAPIKeyRequest) returns (CreateAPIKeyResponse);
+  rpc ListAPIKeys(ListAPIKeysRequest) returns (ListAPIKeysResponse);
+  rpc RevokeAPIKey(RevokeAPIKeyRequest) returns (google.protobuf.Empty);
+}
+
+message LoginRequest {
+  string username = 1;
+  string password = 2;
+  string tenant_name = 3;   // tenant slug to scope the login
+}
+
+message TokenPair {
+  string access_token        = 1;
+  string refresh_token       = 2;
+  int32  expires_in          = 3;   // access token TTL in seconds
+  google.protobuf.Timestamp issued_at = 4;
+}
+
+message AccessToken {
+  string access_token = 1;
+  int32  expires_in   = 2;
+}
+
+message RefreshTokenRequest {
+  string refresh_token = 1;
+}
+
+message RevokeTokenRequest {
+  string jti = 1;   // JWT ID to add to blocklist
+}
+
+message ValidateTokenRequest {
+  string token = 1;   // raw JWT or API key value
+}
+
+message CheckPermissionRequest {
+  string tenant_id  = 1;
+  string user_id    = 2;
+  repeated string roles = 3;
+  string resource   = 4;   // e.g. "models"
+  string action     = 5;   // e.g. "delete"
+}
+
+message CheckPermissionResponse {
+  bool allowed = 1;
+  string reason = 2;   // set when allowed=false
+}
+
+message CreateAPIKeyRequest {
+  string tenant_id = 1;
+  string user_id   = 2;
+  string name      = 3;
+  repeated string scopes = 4;
+  int32  rate_limit_rpm  = 5;
+  google.protobuf.Timestamp expires_at = 6;   // optional
+}
+
+message CreateAPIKeyResponse {
+  string key_id     = 1;
+  string key_value  = 2;   // shown ONCE; never stored in plaintext
+  string key_prefix = 3;   // e.g. "ani_prod_xxxx" for UI display
+}
+
+message ListAPIKeysRequest {
+  string tenant_id = 1;
+  string user_id   = 2;   // empty = all keys for tenant
+}
+
+message ListAPIKeysResponse {
+  repeated APIKeyInfo keys = 1;
+}
+
+message APIKeyInfo {
+  string id           = 1;
+  string name         = 2;
+  string key_prefix   = 3;
+  repeated string scopes = 4;
+  int32  rate_limit_rpm  = 5;
+  google.protobuf.Timestamp created_at  = 6;
+  google.protobuf.Timestamp expires_at  = 7;
+  google.protobuf.Timestamp last_used_at = 8;
+  bool   is_active    = 9;
+}
+
+message RevokeAPIKeyRequest {
+  string tenant_id = 1;
+  string key_id    = 2;
+}

@@ -1,0 +1,115 @@
+package bootstrap
+
+import (
+	"context"
+	"fmt"
+	"log/slog"
+	"net"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
+)
+
+// Config holds connection strings. Load from environment in each service's config.Load().
+type Config struct {
+	DatabaseURL string
+	NATSURL     string
+	RedisURL    string
+	GRPCPort    int
+	ServiceName string
+}
+
+// MustConnect initializes all dependencies. Exits the process if any connection fails.
+func MustConnect(cfg Config) *Deps {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
+	db, err := connectDB(cfg.DatabaseURL)
+	if err != nil {
+		logger.Error("failed to connect to database", "err", err)
+		os.Exit(1)
+	}
+
+	nc, js, err := connectNATS(cfg.NATSURL)
+	if err != nil {
+		logger.Error("failed to connect to NATS", "err", err)
+		os.Exit(1)
+	}
+
+	rdb, err := connectRedis(cfg.RedisURL)
+	if err != nil {
+		logger.Error("failed to connect to Redis", "err", err)
+		os.Exit(1)
+	}
+
+	return &Deps{
+		DB:     db,
+		NATS:   nc,
+		JS:     js,
+		Redis:  rdb,
+		Logger: logger,
+	}
+}
+
+// RunGRPC starts a gRPC server on port and blocks until SIGINT/SIGTERM.
+// register is called to register all service implementations.
+// Performs graceful shutdown: waits for in-flight RPCs to complete.
+func RunGRPC(port int, register func(*grpc.Server), deps *Deps) {
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
+	if err != nil {
+		deps.Logger.Error("failed to listen", "port", port, "err", err)
+		os.Exit(1)
+	}
+
+	srv := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			loggingUnaryInterceptor(deps.Logger),
+			recoveryUnaryInterceptor(deps.Logger),
+		),
+	)
+
+	register(srv)
+	reflection.Register(srv) // enables grpcurl and grpc-gateway reflection
+
+	go func() {
+		deps.Logger.Info("gRPC server listening", "port", port)
+		if err := srv.Serve(lis); err != nil {
+			deps.Logger.Error("gRPC serve error", "err", err)
+		}
+	}()
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	<-ctx.Done()
+
+	deps.Logger.Info("shutting down gRPC server gracefully")
+	srv.GracefulStop()
+	deps.Logger.Info("gRPC server stopped")
+}
+
+// loggingUnaryInterceptor logs every gRPC call with duration and status.
+func loggingUnaryInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		resp, err := handler(ctx, req)
+		if err != nil {
+			logger.ErrorContext(ctx, "gRPC error", "method", info.FullMethod, "err", err)
+		}
+		return resp, err
+	}
+}
+
+// recoveryUnaryInterceptor catches panics and converts them to gRPC Internal errors.
+func recoveryUnaryInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.ErrorContext(ctx, "gRPC panic recovered", "method", info.FullMethod, "panic", r)
+				err = fmt.Errorf("internal error")
+			}
+		}()
+		return handler(ctx, req)
+	}
+}

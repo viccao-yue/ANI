@@ -1,0 +1,84 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## 项目背景
+
+广州常青云科技有限公司旗下战略级新产品 **KuberCloud ANI**（KuberCloud AI-Native Infrastructure，中文名：AI专有云）的规划文档集，当前产品定义版本 **V7**。
+
+**必读顺序（任何参与本项目的 Claude 实例，在开始任何任务前必须先读）：**
+
+```
+ANI-00  产品战略与开发哲学   ← 最高优先级，所有决策的出发点
+ANI-01  客户画像与场景分析
+ANI-02  产品功能设计
+ANI-03  产品路线图
+ANI-04  技术栈设计
+ANI-05  系统架构设计
+ANI-06  开发计划            ← 详细开发点拆解与月度里程碑
+ANI-07  部署工程设计        ← Installer、多部署目标、Region/AZ、计量、白牌化
+ANI-08  安全架构设计        ← 平台自身安全（第一层）+ 安全服务能力（第二层）
+ANI-09  数据模型设计        ← PostgreSQL 全量表结构 / Milvus Collection / Redis Key / MinIO Bucket
+ANI-10  GPT审查提示词集     ← 8组结构化审查提示词，用于 GPT 5.5 跨模型设计审查
+ANI-11  代码实现规范        ← Repository接口、三条核心流程时序、Bootstrap模式、Go规范、前端路由
+```
+
+**代码仓库位置：** `repo/`（相对于本文档目录）
+
+```
+repo/
+├── services/ani-gateway/      # Go，统一 Web Server（Hertz）
+├── ai/rag-engine/             # Python，RAG 引擎
+├── operators/inference-operator/ # Go，K8s Operator
+├── frontends/{console,boss}/  # TypeScript，React 18 + TDesign
+├── cli/ani/                   # Go，ani CLI
+├── installer/ani-installer/   # Go，bubbletea TUI 安装程序
+├── api/openapi/v1.yaml        # OpenAPI 3.1 Spec（先于代码）
+├── deploy/docker/             # docker-compose 本地开发环境
+├── Makefile                   # make deps / make dev-gateway / make test
+└── .env.example               # 环境变量模板，cp 为 .env
+```
+
+**三条核心原则（来自 ANI-00）：**
+1. 产品完全从零构建，底层最大化复用成熟开源组件，ANI 的价值在于"编排"与"封装"
+2. 全程利用 AI 大模型辅助编码加速开发，架构设计必须对 AI 辅助友好（Spec-First、强类型、单一职责）
+3. 这是生产级平台，不是原型或玩具——稳定性、可扩展性、可观测性、安全性有明确的量化标准
+
+---
+
+## Karpathy 四条开发原则
+
+> 来源：Andrej Karpathy 关于 LLM 辅助编程的核心建议，整理自 [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills)
+
+### 原则一：先思考，再编码
+**不要假设。不要掩饰困惑。要揭示取舍。**
+
+- 如果需求有歧义，明确说出来并询问，而不是悄悄选一种猜测实现
+- 存在多种合理方案时，列出并说明各方案的取舍，由人决策
+- 面对复杂问题，先陈述理解再动手
+- 遇到不确定的地方，停下来问，而不是带着疑惑继续
+
+### 原则二：用能解决问题的最小代码
+**拒绝一切带有猜想的实现。**
+
+- 不实现没被要求的功能，哪怕"感觉以后用得到"
+- 不为一次性代码创建抽象层
+- 不加"灵活性""可配置性"等未被要求的扩展点
+- 200 行能写成 50 行的，重写
+
+### 原则三：只触碰你必须改动的部分
+**只清理你自己制造的脏。**
+
+- 不顺手"优化"任务范围之外的代码、注释或格式
+- 不重构没坏的东西
+- 保持现有代码风格，即使你有不同偏好
+- 发现死代码，提出来，不要自作主张删除
+
+### 原则四：定义成功标准，循环迭代直到验证通过
+**把任务转化为可验证的目标。**
+
+- 每个任务开始前明确"什么状态算完成"
+- 多步骤任务先列出简短计划和验证步骤
+- 优先给 Claude 成功标准而非操作指令：不是"修复这个 bug"，而是"写一个能复现 bug 的测试，再修复它"
+
+---

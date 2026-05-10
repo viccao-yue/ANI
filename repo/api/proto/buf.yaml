@@ -1,0 +1,10 @@
+version: v2
+modules:
+  - path: .
+    name: buf.build/kubercloud/ani
+lint:
+  use: [STANDARD]
+  except:
+    - PACKAGE_VERSION_SUFFIX   # we use v1 suffix in package names
+breaking:
+  use: [FILE]

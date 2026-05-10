@@ -1,0 +1,156 @@
+syntax = "proto3";
+
+package model.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/kubercloud/ani/pkg/generated/pb/model/v1;modelv1";
+
+// ModelService manages the private model registry.
+service ModelService {
+  // CreateModel creates a model metadata record.
+  // The client must upload the model file via GetUploadURL after creation.
+  rpc CreateModel(CreateModelRequest) returns (Model);
+
+  // GetModel retrieves a model by ID. Returns NOT_FOUND if tenant mismatch.
+  rpc GetModel(GetModelRequest) returns (Model);
+
+  // ListModels returns a cursor-paginated list of models for the tenant.
+  rpc ListModels(ListModelsRequest) returns (ListModelsResponse);
+
+  // DeleteModel soft-deletes a model. Fails if any InferenceService references it.
+  rpc DeleteModel(DeleteModelRequest) returns (google.protobuf.Empty);
+
+  // CreateModelVersion registers a new version after the file is uploaded to MinIO.
+  rpc CreateModelVersion(CreateModelVersionRequest) returns (ModelVersion);
+
+  // GetUploadURL returns a MinIO presigned PUT URL for uploading a model file.
+  // The client uploads directly to MinIO, then calls CreateModelVersion.
+  rpc GetUploadURL(GetUploadURLRequest) returns (GetUploadURLResponse);
+
+  // ImportModel triggers an asynchronous download from HuggingFace or ModelScope.
+  // Returns an AsyncTaskRef. Poll /api/v1/tasks/{task_id} for progress.
+  rpc ImportModel(ImportModelRequest) returns (common.v1.AsyncTaskRef);
+
+  // GetModelDownloadURL returns a presigned GET URL for a model version.
+  // Called by the Init Container when starting an InferenceService pod.
+  rpc GetModelDownloadURL(GetModelDownloadURLRequest) returns (GetModelDownloadURLResponse);
+}
+
+// ── Request / Response messages ───────────────────────────────────────────────
+
+message CreateModelRequest {
+  string tenant_id    = 1;   // extracted from JWT by gateway; service validates match
+  string name         = 2;   // unique within tenant; pattern: [a-z0-9][a-z0-9.-]{0,62}
+  string display_name = 3;
+  string description  = 4;
+  repeated string capabilities = 5; // text-generation | embedding | speech-to-text
+}
+
+message GetModelRequest {
+  string tenant_id = 1;
+  string model_id  = 2;
+}
+
+message ListModelsRequest {
+  string tenant_id = 1;
+  string status    = 2;   // filter by status; empty = all
+  common.v1.CursorPageRequest page = 3;
+}
+
+message ListModelsResponse {
+  repeated Model models           = 1;
+  common.v1.CursorPageMeta meta   = 2;
+}
+
+message DeleteModelRequest {
+  string tenant_id = 1;
+  string model_id  = 2;
+}
+
+message CreateModelVersionRequest {
+  string tenant_id       = 1;
+  string model_id        = 2;
+  string version         = 3;   // e.g. "v1", "latest"
+  string format          = 4;   // safetensors | gguf | pytorch
+  string storage_path    = 5;   // MinIO object path (set by client after upload)
+  string checksum_sha256 = 6;
+  int64  size_bytes      = 7;
+
+  // Encryption fields — only set if model was encrypted before upload.
+  bool   is_encrypted  = 8;
+  string encrypt_algo  = 9;    // sm4 | zuc | aes256gcm
+  string encrypt_hint  = 10;   // user-defined password hint; NOT the key itself
+}
+
+message GetUploadURLRequest {
+  string tenant_id  = 1;
+  string model_id   = 2;
+  string version    = 3;
+  string file_name  = 4;
+  int64  size_bytes = 5;
+}
+
+message GetUploadURLResponse {
+  string upload_url  = 1;   // presigned PUT URL (valid 60 minutes)
+  string storage_path = 2;  // MinIO path — pass this to CreateModelVersion
+  string doc_id       = 3;  // model_version_id pre-reserved
+}
+
+message ImportModelRequest {
+  string tenant_id        = 1;
+  string source           = 2;   // huggingface | modelscope
+  string repo_id          = 3;   // e.g. "Qwen/Qwen2.5-72B-Instruct"
+  string revision         = 4;   // branch / tag / commit; default "main"
+  string idempotency_key  = 5;   // client-generated; duplicate calls return existing task
+  string webhook_url      = 6;   // optional callback on completion
+}
+
+message GetModelDownloadURLRequest {
+  string tenant_id        = 1;
+  string model_version_id = 2;
+  string requester        = 3;   // "init-container" — audited
+}
+
+message GetModelDownloadURLResponse {
+  string download_url     = 1;   // presigned GET URL (valid 30 minutes)
+  string storage_path     = 2;
+  bool   is_encrypted     = 3;
+  string encrypt_algo     = 4;
+  string encrypt_hint     = 5;
+}
+
+// ── Domain messages ───────────────────────────────────────────────────────────
+
+message Model {
+  string tenant_id                 = 1;
+  string id                        = 2;
+  string name                      = 3;
+  string display_name              = 4;
+  string description               = 5;
+  string source                    = 6;   // upload | huggingface | modelscope | builtin
+  string source_repo_id            = 7;
+  repeated string capabilities     = 8;
+  string status                    = 9;   // pending | downloading | ready | error | deleted
+  string error_message             = 10;
+  int64  total_size_bytes          = 11;
+  repeated ModelVersion versions   = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+message ModelVersion {
+  string id              = 1;
+  string model_id        = 2;
+  string version         = 3;
+  string format          = 4;   // safetensors | gguf | pytorch
+  bool   is_encrypted    = 5;
+  string encrypt_algo    = 6;
+  string encrypt_hint    = 7;
+  int64  size_bytes      = 8;
+  string checksum_sha256 = 9;
+  string storage_path    = 10;
+  google.protobuf.Timestamp created_at = 11;
+}

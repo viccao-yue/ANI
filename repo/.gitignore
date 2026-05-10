@@ -1,0 +1,50 @@
+# 环境变量（含敏感信息，绝不提交）
+.env
+.env.local
+.env.*.local
+
+# 编译产物
+bin/
+dist/
+build/
+*.test
+coverage.out
+coverage.html
+
+# Go
+vendor/
+*.exe
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / pnpm
+node_modules/
+.pnpm-store/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 证书和密钥（绝不提交）
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+cosign.key
+
+# 测试临时文件
+/tmp/
+testdata/*/output/

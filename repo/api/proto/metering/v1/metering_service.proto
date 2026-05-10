@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package metering.v1;
+
+import "common/v1/common.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/kubercloud/ani/pkg/generated/pb/metering/v1;meteringv1";
+
+// MeteringService records and queries resource usage.
+service MeteringService {
+  // RecordUsage is called by internal services after each billable event.
+  // Fire-and-forget; gateway does NOT wait for acknowledgement.
+  rpc RecordUsage(RecordUsageRequest) returns (google.protobuf.Empty);
+
+  // QueryUsage returns time-series usage data for a tenant.
+  rpc QueryUsage(QueryUsageRequest) returns (QueryUsageResponse);
+
+  // GetSummary returns aggregated usage for a billing period (for BOSS reports).
+  rpc GetSummary(GetSummaryRequest) returns (UsageSummary);
+}
+
+message RecordUsageRequest {
+  string tenant_id      = 1;
+  string az_name        = 2;
+  common.v1.ResourceType resource_type = 3;
+  string resource_id    = 4;   // UUID of the service/KB that generated usage
+  double quantity       = 5;
+  string unit           = 6;   // hours | GB-hours | tokens | calls
+  google.protobuf.Timestamp recorded_at = 7;
+}
+
+message QueryUsageRequest {
+  string tenant_id        = 1;
+  common.v1.ResourceType resource_type = 2;   // 0 = all types
+  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp end_time   = 4;
+  string group_by         = 5;   // resource_type | az | day | hour
+}
+
+message QueryUsageResponse {
+  repeated UsageRecord records = 1;
+}
+
+message UsageRecord {
+  common.v1.ResourceType resource_type = 1;
+  string az_name      = 2;
+  double total        = 3;
+  string unit         = 4;
+  string period       = 5;   // ISO 8601 date or ISO 8601 datetime
+}
+
+message GetSummaryRequest {
+  string tenant_id = 1;
+  google.protobuf.Timestamp period_start = 2;
+  google.protobuf.Timestamp period_end   = 3;
+}
+
+message UsageSummary {
+  string tenant_id   = 1;
+  google.protobuf.Timestamp period_start = 2;
+  google.protobuf.Timestamp period_end   = 3;
+  repeated UsageRecord by_resource = 4;
+  double total_gpu_hours     = 5;
+  int64  total_input_tokens  = 6;
+  int64  total_output_tokens = 7;
+  int64  total_kb_queries    = 8;
+}
