@@ -162,12 +162,13 @@
   - Webhook 回调：任务完成后主动推送到客户配置的 URL
   - **开源组件：** NATS JetStream 2.10+
   - **当前实现对齐（2026-05-11）：**
-    - 对应代码生成阶段：`Stage 3A + 3B` 已完成，下一步进入 `Stage 3C`。
-    - `Stage 3A`：已实现最小 `task-service` 查询接口，支持 `GetTask`，读取前设置租户上下文以配合 PostgreSQL RLS。
-    - `Stage 3B`：已实现 `transactional outbox` 仓储与 NATS outbox publisher，使用 `FOR UPDATE SKIP LOCKED` 拉取未发布事件。
-    - `Stage 3C`：待实现 worker mutation RPC，包括任务领取、租约心跳、进度更新、失败、完成；实施前必须先修正 `task_service.proto` 的租户/安全上下文。
+    - 当前仍属于 `模块 2 -> 2.1 Gateway 骨架 -> NATS JetStream 异步任务框架`，尚未进入 `模块 3：模型管理平台`。
+    - 代码生成批次命名统一为 `M2.1-TASK-A/B/C`；历史记录里的 `Stage 3A/3B/3C` 只是旧的内部切片名，不代表 `ANI-06` 的模块 3。
+    - `M2.1-TASK-A`：已实现最小 `task-service` 查询接口，支持 `GetTask`，读取前设置租户上下文以配合 PostgreSQL RLS。
+    - `M2.1-TASK-B`：已实现 `transactional outbox` 仓储与 NATS outbox publisher，使用 `FOR UPDATE SKIP LOCKED` 拉取未发布事件。
+    - `M2.1-TASK-C`：待实现 worker mutation RPC，包括任务领取、租约心跳、进度更新、失败、完成；实施前必须先修正 `task_service.proto` 的租户/安全上下文。
     - 进度记录文件：
-      - `repo/development-records/stage-3A-3B-task-service-outbox.md`
+      - `repo/development-records/m2-1-task-a-b-task-service-outbox.md`
       - `repo/development-records/2026-05-11-handoff-codex-cloud.md`
     - 当前验证状态：`make gen-proto`、`make test`、`make build` 已通过。
 

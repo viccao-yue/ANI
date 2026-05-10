@@ -5,6 +5,51 @@
 
 ---
 
+## 零、开发阶段命名与进度记录约定
+
+这是代码生成的强制约定，优先级高于单次提示词中的临时命名。
+
+### 0.1 产品模块编号
+
+- 产品计划阶段只以 `ANI-06-开发计划.md` 为准。
+- `模块 1/2/3...` 表示产品开发模块，不能被代码生成批次复用。
+- 当前实现仍处于 `ANI-06 / 模块 2 / 2.1 Gateway 骨架 / NATS JetStream 异步任务框架`，不是 `模块 3：模型管理平台`。
+
+### 0.2 代码生成批次编号
+
+代码生成批次必须使用以下格式：
+
+```text
+M{模块号}.{小节号}-{主题}-{批次字母}
+```
+
+示例：
+
+```text
+M2.1-TASK-A
+M2.1-TASK-B
+M2.1-TASK-C
+```
+
+禁止在新的记录、提交说明、提示词中继续使用 `Stage 3A/3B/3C` 作为主名称，因为它会被误解为 `ANI-06` 的模块 3。
+
+历史旧名映射：
+
+| 新名称 | 历史旧名 | 产品计划映射 |
+|---|---|---|
+| `M2.1-TASK-A` | `Stage 3A` | `模块 2 / 2.1 Gateway 骨架 / NATS JetStream 异步任务框架 / task query path` |
+| `M2.1-TASK-B` | `Stage 3B` | `模块 2 / 2.1 Gateway 骨架 / NATS JetStream 异步任务框架 / transactional outbox + NATS publisher` |
+| `M2.1-TASK-C` | `Stage 3C` | `模块 2 / 2.1 Gateway 骨架 / NATS JetStream 异步任务框架 / worker mutation RPCs` |
+
+### 0.3 进度记录文件
+
+- 每个代码生成批次完成后，必须新增或更新 `repo/development-records/` 下的记录。
+- `repo/development-records/README.md` 是当前进度索引，任何阶段推进都必须同步更新。
+- 记录文件命名必须使用新命名格式，例如 `m2-1-task-c-worker-mutations.md`。
+- 记录中必须包含：产品计划映射、实现范围、修改文件、验证命令、剩余风险、下一步边界。
+
+---
+
 ## 一、模块结构
 
 ### 1.1 Go Workspace 布局

@@ -16,11 +16,16 @@ Remote repository:
 The repository has been initialized, committed, and pushed to GitHub.
 
 Implemented scope is recorded in:
-- `development-records/stage-3A-3B-task-service-outbox.md`
+- `development-records/m2-1-task-a-b-task-service-outbox.md`
 
 Implemented stages:
-- Stage 3A: minimal `task-service` query interface.
-- Stage 3B: transactional outbox publisher loop.
+- `M2.1-TASK-A`: minimal `task-service` query interface.
+- `M2.1-TASK-B`: transactional outbox publisher loop.
+
+Naming clarification:
+- Current work belongs to `ANI-06 / 模块 2 / 2.1 Gateway 骨架 / NATS JetStream 异步任务框架`.
+- It does not belong to `ANI-06 / 模块 3：模型管理平台`.
+- Earlier records used `Stage 3A/3B/3C` as internal code-generation slice names. Going forward, use `M2.1-TASK-A/B/C`.
 
 Additional setup completed:
 - Go toolchain is installed locally.
@@ -64,18 +69,19 @@ Use GitHub OAuth, Git Credential Manager, or a local one-time credential prompt 
 
 ## Next Development Stage
 
-Next stage should be Stage 3C only:
+Next implementation slice should be `M2.1-TASK-C` only:
 
 Task Service Worker Mutation RPCs with tenant-safe writes.
 
-Do not start the following until Stage 3C is accepted:
+Do not start the following until `M2.1-TASK-C` is accepted:
 - Frontend feature work.
 - MinIO object storage workflow.
 - Inference operator implementation.
 - Billing/metering workflow expansion.
+- Module 3 model management platform work.
 - Broad API cleanup unrelated to task worker mutation safety.
 
-## Stage 3C Scope
+## M2.1-TASK-C Scope
 
 Required work:
 - Review `ANI-08-安全架构设计.md`, `ANI-09-数据模型设计.md`, `ANI-11-代码实现规范.md`, and the existing task service code.
@@ -85,7 +91,7 @@ Required work:
 - Preserve transactional outbox guarantees.
 - Add focused tests for repository/service behavior where practical.
 - Update a new development record:
-  - `development-records/stage-3C-task-worker-mutations.md`
+  - `development-records/m2-1-task-c-worker-mutations.md`
 
 Required validation:
 
@@ -99,9 +105,11 @@ make build
 ## Suggested Codex Cloud Prompt
 
 ```text
-请加载本仓库，先阅读 CLAUDE.md、ANI-00 到 ANI-11 设计文档，以及 repo/development-records/stage-3A-3B-task-service-outbox.md 和 repo/development-records/2026-05-11-handoff-codex-cloud.md。
+请加载本仓库，先阅读 CLAUDE.md、ANI-00 到 ANI-11 设计文档，以及 repo/development-records/README.md、repo/development-records/m2-1-task-a-b-task-service-outbox.md 和 repo/development-records/2026-05-11-handoff-codex-cloud.md。
 
-继续阶段 3C 开发，只做 Task Service Worker Mutation RPC 与多租户安全闭环，不要跳到前端、MinIO、Operator 或其它阶段。
+继续 `M2.1-TASK-C` 开发，只做 `ANI-06 / 模块 2 / 2.1 Gateway 骨架 / NATS JetStream 异步任务框架` 下的 Task Service Worker Mutation RPC 与多租户安全闭环。
+
+注意：不要进入 `ANI-06 / 模块 3：模型管理平台`。历史记录里的 `Stage 3A/3B/3C` 是旧的内部代码生成切片名，不代表模块 3。
 
 要求：
 1. 基于设计文档，不绕过 PostgreSQL RLS 和 tenant_id 安全边界。
@@ -115,7 +123,7 @@ make build
    - make gen-proto
    - make test
    - make build
-9. 新增开发记录：repo/development-records/stage-3C-task-worker-mutations.md，记录：
+9. 新增开发记录：repo/development-records/m2-1-task-c-worker-mutations.md，记录：
    - 实现了哪些功能
    - 修改了哪些文件
    - 做了哪些测试

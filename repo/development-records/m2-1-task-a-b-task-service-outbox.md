@@ -1,10 +1,18 @@
-# Stage 3A + 3B Development Record
+# M2.1-TASK-A + M2.1-TASK-B Development Record
+
+Legacy name:
+- `Stage 3A + 3B`
+
+Naming clarification:
+- This record belongs to `ANI-06 / 模块 2 / 2.1 Gateway 骨架 / NATS JetStream 异步任务框架`.
+- It does not mean `ANI-06 / 模块 3：模型管理平台`.
+- Use `M2.1-TASK-A/B/C` for future references.
 
 Date: 2026-05-11
 
 Scope accepted by product owner:
-- Stage 3A: implement the minimal `task-service` query interface.
-- Stage 3B: implement the outbox publisher loop.
+- `M2.1-TASK-A`: implement the minimal `task-service` query interface.
+- `M2.1-TASK-B`: implement the outbox publisher loop.
 
 Design sources:
 - `ANI-11-代码实现规范.md`
@@ -14,7 +22,7 @@ Design sources:
 
 ## Implemented
 
-Stage 3A:
+M2.1-TASK-A:
 - Added `services/task-service`.
 - Added environment-based config loading.
 - Added gRPC registration through shared `bootstrap.RunGRPC`.
@@ -22,7 +30,7 @@ Stage 3A:
 - `GetTask` sets tenant context before reading `async_tasks`, so PostgreSQL RLS remains active.
 - Worker mutation RPCs remain explicitly `Unimplemented` because current proto requests do not carry tenant context for safe RLS-backed writes.
 
-Stage 3B:
+M2.1-TASK-B:
 - Added shared `pkg/repo.OutboxRepo`.
 - Implemented `FetchUnpublished` using `FOR UPDATE SKIP LOCKED`.
 - Implemented `MarkPublished`.
@@ -38,7 +46,7 @@ Stage 3B:
 - `services/task-service/internal/config/config.go`
 - `services/task-service/internal/service/task_service.go`
 - `services/task-service/internal/worker/outbox_publisher.go`
-- `development-records/stage-3A-3B-task-service-outbox.md`
+- `development-records/m2-1-task-a-b-task-service-outbox.md`
 
 ## Files Updated
 

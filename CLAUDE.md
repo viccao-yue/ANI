@@ -39,6 +39,20 @@ repo/
 └── .env.example               # 环境变量模板，cp 为 .env
 ```
 
+## 开发阶段命名强制约定
+
+为避免产品计划阶段与 AI 代码生成批次混淆，所有 Claude/Codex/GPT 实例必须遵守：
+
+1. `ANI-06` 中的 `模块 1/2/3...` 是产品开发计划的唯一模块编号来源。
+2. 代码生成批次不得再使用 `Stage 3A/3B/3C` 这类容易误解为模块 3 的名称。
+3. 代码生成批次必须使用可回溯命名：`M{模块号}.{小节号}-{主题}-{批次}`，例如 `M2.1-TASK-A`。
+4. 当前项目进度是 `ANI-06 / 模块 2 / 2.1 Gateway 骨架 / NATS JetStream 异步任务框架`：
+   - `M2.1-TASK-A` 已完成：最小 `task-service` 查询接口。
+   - `M2.1-TASK-B` 已完成：transactional outbox + NATS publisher。
+   - `M2.1-TASK-C` 下一步：worker mutation RPCs with tenant-safe writes。
+5. `Stage 3A/3B/3C` 只允许作为历史旧名出现，并必须注明“不代表模块 3”。
+6. 任何进度更新必须同步写入 `repo/development-records/README.md`，并在对应设计文件中标注产品计划映射。
+
 **三条核心原则（来自 ANI-00）：**
 1. 产品完全从零构建，底层最大化复用成熟开源组件，ANI 的价值在于"编排"与"封装"
 2. 全程利用 AI 大模型辅助编码加速开发，架构设计必须对 AI 辅助友好（Spec-First、强类型、单一职责）
