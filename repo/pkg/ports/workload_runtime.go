@@ -260,6 +260,11 @@ type WorkloadProviderStatusRequest struct {
 }
 
 type WorkloadInstanceCreateRequest struct {
+	// IdempotencyKey is a client-generated UUID. The server returns the same
+	// result for any duplicate submission with the same (tenant_id, IdempotencyKey)
+	// within 24 hours, without creating a second instance.
+	// Clients MUST supply a new UUID per distinct create intent.
+	IdempotencyKey  string
 	Spec            WorkloadSpec
 	UserID          string
 	PermissionProof string
@@ -290,6 +295,9 @@ type WorkloadInstanceListRequest struct {
 }
 
 type WorkloadInstanceLifecycleRequest struct {
+	// IdempotencyKey prevents duplicate lifecycle actions on retry.
+	// Required for stop/delete; optional but recommended for start/restart.
+	IdempotencyKey  string
 	TenantID        string
 	InstanceID      string
 	Action          WorkloadLifecycleAction

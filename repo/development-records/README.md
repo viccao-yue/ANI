@@ -46,6 +46,9 @@ As of 2026-05-11, development is in:
   - `M1-INSTANCE-S` VM console and remote ops session boundary completed and validated.
   - `DEMO-INSTANCE-WORKSPACE-UI-A` production-oriented instance workspace UI completed and validated.
   - `2026-05-12-demo-handoff` records the paused Demo environment, mock boundaries, startup commands, and next development options.
+  - `2026-05-12-aws-instance-lifecycle-reference` records the AWS-derived instance lifecycle feature-depth guide before the next production implementation slice.
+  - `2026-05-12-instance-lifecycle-implementation-plan` decomposes the AWS-derived instance lifecycle guide into ANI implementation slices.
+  - `2026-05-12-p0-instance-scope-confirmation` confirms the v1.0.0 P0 instance scope: VM, container, GPU container, and basic inference instance.
 
 Important naming note:
 - This is not `模块 3：模型管理平台`.
@@ -118,6 +121,9 @@ Before continuing code generation, read these files in order:
 8. `repo/development-records/2026-05-11-next-development-plan.md`
 9. `ANI-13-开源组件松耦合适配器架构.md`
 10. `repo/development-records/2026-05-12-demo-handoff.md`
+11. `repo/development-records/2026-05-12-aws-instance-lifecycle-reference.md`
+12. `repo/development-records/2026-05-12-instance-lifecycle-implementation-plan.md`
+13. `repo/development-records/2026-05-12-p0-instance-scope-confirmation.md`
 
 ## Version Position
 
@@ -174,14 +180,21 @@ Before continuing code generation, read these files in order:
 - `M1-INSTANCE-S` adds VM console/VNC/serial ops session boundaries and richer staged lifecycle/ops presentation controls; release impact is `MINOR`.
 - `DEMO-INSTANCE-WORKSPACE-UI-A` redesigns the staged instance demo as a production-oriented instance workspace reference; release impact is `MINOR`.
 - `2026-05-12-demo-handoff` is documentation only and records the paused local Demo environment; release impact is `no-release-impact`.
+- `2026-05-12-aws-instance-lifecycle-reference` is documentation only and records AWS-derived instance lifecycle feature-depth requirements; release impact is `no-release-impact`.
+- `2026-05-12-instance-lifecycle-implementation-plan` is documentation only and decomposes instance lifecycle feature-depth work into future slices; release impact is `no-release-impact`.
+- `2026-05-12-p0-instance-scope-confirmation` is documentation only and records the confirmed v1.0.0 P0 instance feature boundary; release impact is `no-release-impact`.
 
 ## Next Work Boundary
 
 Recommended next implementation options:
 
 - Optional `M1-DEMO-SMOKE-A`: live KubeVirt/Kubernetes/GPU smoke profile for presentation environments.
+- `M1-INSTANCE-T`: AWS-derived instance product spec enrichment for state reasons, action precheck, operation timeline, and production-grade click feedback.
+- P0 instance scope reference: `2026-05-12-p0-instance-scope-confirmation.md`.
+- Instance implementation planning reference: `2026-05-12-instance-lifecycle-implementation-plan.md`.
 - `M3-MODEL-A`: module 3 model metadata and object-storage boundary design/implementation, after accepting the M1/M2/GPU/Runtime/Instance baseline.
 - Demo resume reference: `2026-05-12-demo-handoff.md`.
+- Instance lifecycle feature-depth reference: `2026-05-12-aws-instance-lifecycle-reference.md`.
 
 Continue module 1 and module 2 in parallel, but keep each implementation slice independently reviewable and validated.
 

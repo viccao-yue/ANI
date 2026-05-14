@@ -23,23 +23,93 @@
 
 ---
 
-## 二、月度里程碑
+## 二、月度里程碑（V8 重规划，2026-05-14 更新）
+
+**产品分层背景：** ANI 分为 ANI Core（基础设施平台）和 ANI Services（云服务层）。本开发计划优先保障 ANI Core v1.0.0 在 7 月底 API 冻结，为 Services 团队提供 2 个月并行开发窗口。
 
 ```
-2026-05  M1  基础设施底座 + ANI Gateway 骨架 + 存储底座 + Harbor 部署
-2026-06  M2  认证授权 + 模型仓库（含国密加密 / HuggingFace / ModelScope 导入）
-2026-07  M3  推理部署 Operator + 知识库 RAG 引擎
-2026-08  M4  Console + BOSS 前端全量 + 镜像仓库管理 + CLI 工具
-2026-09  M5  可观测性完整闭环 + 信创适配 + 集成测试 + 离线安装包
-─────────────────────────────────────────────────────
-2026-09-30   ✅ 第一版本 POC 交付就绪
+─────────────────────────────────────────────────────────────────────
+ANI Core 开发线（本小组）
+─────────────────────────────────────────────────────────────────────
+
+2026-05~06  【M1-CORE】ANI Core 计算/网络/存储实例能力完整化
+             - M1-INSTANCE-T/U/V：实例操作语义 + VM + 容器/GPU 容器深度
+             - M1-HEALTH-A：/healthz + /readyz 端点（K8s probe，所有服务必须实现）
+             - M1-IDEM-A：幂等性令牌落地（migration 002 + WorkloadInstanceCreateRequest.IdempotencyKey）
+             - M1-RECONCILE-A：WorkloadReconcileController 实现（background loop，30s/5s 双速扫描）
+             - M1-WKID-A：Workload Identity P0（lifecycle-bound API Key，实例创建时自动生成 + 自动 revoke）
+             - M1-SANDBOX-A：Sandbox 实例接入（Kata QEMU RuntimeClass）
+             - M1-NETWORK-A：网络服务层 API（VPC/子网/安全组 CRUD）
+             - M1-STORAGE-A：存储服务层 API（块/对象/文件存储 CRUD）
+             - M1-VSTORE-A：向量存储 API（Milvus adapter 封装）
+             - M1-BM-A：裸金属实例（Metal3 基础接入，BM 库存 + OS 部署）
+             - M2.2-AUTH 收尾：OIDC 全流程稳定、API Key 完善
+
+2026-07     【M2-CORE-API】ANI Core API 契约冻结 + 四语言 SDK + CLI
+             - SPEC-SPLIT-A：将 v1.yaml 中的 Services 层路径迁移至 api/openapi/services/v1.yaml
+                             （/models、/inference-services、/knowledge-bases 移至 services spec）
+             - SPEC-CORE-A：补全所有 Core 基础设施路径到 api/openapi/v1.yaml（含 /api/v1 前缀）
+             - API 契约冻结（api/openapi/v1.yaml 覆盖全部 Core 资源）← 目标 2026-07-15
+             - SDK-GO-A：Go SDK（oapi-codegen 生成，github.com/kubercloud/ani-go）
+             - SDK-PY-A：Python SDK（openapi-generator 生成，pip install kubercloud-ani）
+             - SDK-TS-A：TypeScript API Client（openapi-typescript + openapi-fetch）← P0
+             - SDK-JAVA-A：Java SDK（openapi-generator + OkHttp3，com.kubercloud:ani-java）← 升至 P0
+             - CLI-A：ani CLI 覆盖 Core 所有资源核心命令
+             - MOCK-A：Mock Server 就绪（Prism 或 Microcks），Services 团队可开始开发
+             - DOC-API-A：API 参考文档（Swagger UI / Redoc）自动生成
+             注：四语言 SDK 全部从同一 spec 自动生成，不手写；Java SDK 面向中国企业集成场景（Spring Boot）
+
+2026-08     【M3-CORE-PLATFORM】ANI Core 平台支撑能力
+             - M1-ENCRYPT-A：国密加解密服务（SM4 密钥管理 + seal/unseal-token）
+             - M1-SECRETS-A：密钥管理 API + 实例绑定注入
+             - M1-REGISTRY-A：镜像仓库 API（Harbor 服务层封装）
+             - M1-METER-A：用量计量 API（实例用量 + Token 用量上报）
+             - M1-OBS-A：可观测性 API（PromQL 代理 + 基础告警规则）
+             - M1-SVC-EP-A：服务目录 API（内部 DNS 注册，CoreDNS 集成）
+             - M1-NOTIFY-A：事件通知 API（Webhook/Email 基础版）
+             - M1-K8S-A：K8s 集群管理 API（vCluster 生命周期 + 原生 API 代理）
+             - Core E2E 集成测试全链路回归
+
+2026-09     【M4-CORE-RELEASE】ANI Core v1.0.0-rc + 集成验收
+             - M1-DPU-A：DPU 库存 API 基础实现
+             - Installer：ani-installer 三种部署模式（裸机/VM/已有K8s），离线包
+             - 信创适配基线（预留 ARM64 构建，GPU 替换 adapter 验证）
+             - Core E2E 回归全通，安全审查
+             - v1.0.0-rc.N 发布候选，只修复阻断问题
+
+─────────────────────────────────────────────────────────────────────
+ANI Services 开发线（另一小组，7 月中旬启动）
+─────────────────────────────────────────────────────────────────────
+
+2026-07-15  Services 团队解锁：获得 Python SDK + Mock Server + API 文档
+
+2026-07~08  【SVC-P0-AI】Services P0 AI 能力
+             - SVC-MODEL-A：模型仓库（上传/版本/元数据/国密加解密/HuggingFace 导入）
+             - SVC-INFER-A：推理服务（部署端点/状态/日志/OpenAI 兼容 API）
+             - SVC-KB-A：知识库 RAG（文档上传/解析/向量化/问答/来源引用）
+
+2026-08~09  【SVC-P0-CONSOLE】Services P0 前端
+             - Console 主要实例类型页面接入真实 API
+             - IaaS 控制台（VPC/存储/负载均衡）
+             - 模型管理 + 推理部署页面
+             - 知识库管理页面
+             - BOSS 租户管理基础版
+
+─────────────────────────────────────────────────────────────────────
+2026-09-30   ✅ ANI Core v1.0.0 + ANI Services P0 发布
+─────────────────────────────────────────────────────────────────────
 ```
 
-版本里程碑：
-- 2026-05 到 2026-08：使用 `v0.x.y` 或 `v1.0.0-alpha/beta.N` 标记内部构建和集成测试版本。
-- 2026-09：进入 `v1.0.0-rc.N` 发布候选，只允许修复阻断交付的问题。
-- 2026-09-30：目标发布 `v1.0.0`。
-- 版本号只表达发布兼容性，不表达 `ANI-06` 的模块编号；模块进度仍以 `模块 1/2/3` 和 `M2.1-TASK-C` 这类代码生成批次记录为准。
+**版本里程碑：**
+- 2026-05 到 2026-08：使用 `v0.x.y` 或 `v1.0.0-alpha/beta.N` 标记内部构建和集成测试版本
+- 2026-09：进入 `v1.0.0-rc.N` 发布候选，只允许修复阻断交付的问题
+- 2026-09-30：目标发布 `v1.0.0`
+- 版本号只表达发布兼容性，不表达模块编号；模块进度仍以 `模块 1/2/3` 和 `M2.1-TASK-C` 批次记录为准
+
+**关键时间节点：**
+- `2026-07-15`：Core API 契约冻结 ← **Services 团队的解锁日期，不可推迟**
+- `2026-09-15`：Core v1.0.0-rc，Services P0 API 联调完成
+- `2026-09-30`：双线交付
 
 ---
 
@@ -211,6 +281,14 @@
   - 所有 VM、普通容器、GPU 容器、推理、Notebook、Agent Sandbox、Batch Job 都是 ANI 一等实例对象
   - 生命周期动作：create / start / stop / restart / resize / delete
   - 生命周期状态：pending / provisioning / starting / running / stopping / stopped / failed / deleting / deleted
+  - 2026-05-12 AWS 对标补强：当前 M1 实现属于最小可验证链路，正式产品需继续补齐状态原因、操作预检、操作时间线、停删改安全确认、日志/事件/指标、连接会话、快照/备份、扩缩容、回滚、GPU 调度原因、推理端点 autoscaling/流量策略等功能深度；详见 `repo/development-records/2026-05-12-aws-instance-lifecycle-reference.md`
+  - 2026-05-12 实现拆解：先做 `M1-INSTANCE-T` 横切操作语义，再按 VM、容器/GPU、模型、推理、Notebook、Batch 和生产 Console 逐层补强；详见 `repo/development-records/2026-05-12-instance-lifecycle-implementation-plan.md`
+  - 2026-05-12 P0 范围确认：v1.0.0 P0 实例类型限定为 VM、普通容器、GPU 容器和基础推理实例；Notebook、Batch/训练任务、Agent Sandbox 放入 P1/P2；快照、备份/恢复、克隆、灰度/回滚/高级 autoscaling 暂不进入 P0；详见 `repo/development-records/2026-05-12-p0-instance-scope-confirmation.md`
+
+- [ ] **P0 操作语义底座**
+  - 所有 P0 实例操作必须先支持 precheck、禁用原因、危险操作确认、`operation_id`、操作时间线、失败原因、建议处理、重试资格和审计记录
+  - 这是后续 VM、容器、GPU 容器和推理实例补强的统一前置能力，避免每类实例重复实现操作反馈
+  - **计划实现：** `M1-INSTANCE-T`
 
 - [ ] **实例网络平面**
   - `tenant_vpc`：租户业务系统互通，VM 与 Pod 需要业务互通时共享此平面
@@ -929,6 +1007,186 @@ M5（9月）
 | CLI | cobra + viper | latest | Go CLI 事实标准（kubectl 同款） |
 | 前端框架 | React 18 + TDesign | 18 / 1.x | 企业组件库，中文友好，有 Mobile 版 |
 | 构建工具 | Vite 5 | 5+ | 最快前端构建，HMR 秒级 |
+
+---
+
+---
+
+## 七、V8 新增模块规划（2026-05-14）
+
+本节记录 V8 架构重规划新增的开发模块，作为后续代码生成批次的完整任务清单。
+
+### 模块 M1-SANDBOX：Sandbox 安全沙箱实例
+
+**目标：** 为 Agent 工作负载提供专用隔离运行环境，对标 E2B，P0 基于 Kata Containers + QEMU。
+
+**代码批次规划：**
+
+- [ ] `M1-SANDBOX-A`：Kata Containers QEMU RuntimeClass 接入
+  - 部署 Kata Containers daemonset + RuntimeClass `sandbox-kata`
+  - `WorkloadRuntime` 新增 `kind=sandbox` 支持，部署走 Kata RuntimeClass
+  - Sandbox 实例 spec 增加 `session_policy`（出口约束/最大时长/资源配额）
+  - 验证：创建 Sandbox → exec 命令 → 查看日志 → 清理
+
+- [ ] `M1-SANDBOX-B`（P1）：Kata + Firecracker 后端
+  - 新增 RuntimeClass `sandbox-kata-fc`，启动时间目标 ~150ms
+  - CPU-only 场景，不支持 GPU passthrough
+  - bootstrap 支持按环境切换 RuntimeClass
+
+- [ ] `M1-SANDBOX-C`：Sandbox 会话 API 扩展
+  - `/instances/{id}/sessions/{sid}/exec`：执行命令，流式返回输出
+  - `/instances/{id}/sessions/{sid}/files/*`：文件读写（GET/PUT）
+  - `/instances/{id}/sessions/{sid}/pause`：暂停（保存状态）
+  - `/instances/{id}/sessions/{sid}/resume`：恢复
+  - `/instances/{id}/sessions/{sid}/snapshot`：会话快照（P1）
+
+### 模块 M1-NETWORK-SVC：网络服务层 API
+
+**目标：** 将现有 KubeOVN 基础设施模板提升为完整的服务层 CRUD API。
+
+**代码批次规划：**
+
+- [ ] `M1-NETWORK-A`：VPC + 子网 CRUD API
+  - `POST/GET/DELETE /api/v1/networks/vpcs`
+  - `POST/GET/DELETE /api/v1/networks/subnets`
+  - VPC 创建自动关联 KubeOVN subnet CRD，RLS 租户隔离
+
+- [ ] `M1-NETWORK-B`：安全组 + 路由表 API
+  - `CRUD /api/v1/networks/security-groups`（出入站规则管理）
+  - `CRUD /api/v1/networks/route-tables`（静态路由）
+
+- [ ] `M1-NETWORK-C`：负载均衡 API
+  - `CRUD /api/v1/networks/load-balancers`
+  - 四层 LB（TCP/UDP）+ 七层 LB（HTTP/HTTPS）
+  - 证书管理（cert-manager 集成）
+
+### 模块 M1-STORAGE-SVC：存储服务层 API
+
+**目标：** 将现有存储基础设施提升为完整的服务层 CRUD API（块/对象/文件/向量四类型）。
+
+**代码批次规划：**
+
+- [ ] `M1-STORAGE-A`：块存储 + 对象存储服务层 API
+  - `CRUD /api/v1/volumes`（含挂载/卸载/快照）
+  - `CRUD /api/v1/objects/buckets`（含预签名 URL 生成）
+
+- [ ] `M1-STORAGE-B`：文件存储 API（新存储类型）
+  - `POST/GET/DELETE /api/v1/filesystems`
+  - `CRUD /api/v1/filesystems/{id}/mount-targets`（VPC 内 NFS 挂载点）
+  - `GET /api/v1/filesystems/{id}/usage`
+  - 底层：Rook-CephFS subvolume 或 NFS 导出
+
+- [ ] `M1-VSTORE-A`：向量存储 API（新 Core API 域）
+  - `POST/DELETE /api/v1/vector-stores`（映射 Milvus Collection）
+  - `POST /api/v1/vector-stores/{id}/search`（语义检索）
+  - Milvus SDK 封装在 adapter，business layer 不直接调用
+
+### 模块 M1-BM：裸金属实例
+
+**目标：** 基于 Metal3 + Ironic，为高性能 AI 推理节点提供零虚拟化开销的裸金属实例。
+
+**代码批次规划：**
+
+- [ ] `M1-BM-A`：BM 硬件库存管理
+  - Metal3 BareMetalHost CRD 部署
+  - `GET /api/v1/baremetal/hosts`（硬件库存：CPU/内存/磁盘/NIC/GPU 信息）
+  - `POST /api/v1/baremetal/hosts`（注册 BM 主机，提供 BMC 地址/MAC/凭据）
+  - `POST /api/v1/baremetal/hosts/{id}/power`（BMC 电源操作）
+
+- [ ] `M1-BM-B`：裸金属实例 OS 部署
+  - `WorkloadRuntime` 新增 `kind=bare-metal`
+  - 实例创建触发 Metal3 OS provisioning（PXE + cloud-init）
+  - 生命周期：available → provisioning → running → deprovisioning
+
+- [ ] `M1-BM-C`（P1）：BM 节点加入 K8s
+  - Metal3 + Cluster API 将 BM 主机变成 K8s Worker Node
+  - 支持 GPU 驱动自动安装（NVIDIA GPU Operator）
+  - BM 节点可被 `gpu-inventory` 识别并参与 GPU 调度
+
+### 模块 M1-K8S-CLUSTER：K8s 集群管理 API
+
+**目标：** 为租户提供完整的 K8s 集群生命周期管理 + 原生 API 代理，对标 AWS EKS / Rancher。
+
+**代码批次规划：**
+
+- [ ] `M1-K8S-A`：vCluster 生命周期 API
+  - `POST /api/v1/k8s-clusters`（创建 vCluster，指定 K8s 版本/节点池/网络）
+  - `GET /api/v1/k8s-clusters/{id}`（集群状态/版本/节点数）
+  - `PUT /api/v1/k8s-clusters/{id}`（升级 K8s 版本/调整节点池）
+  - `DELETE /api/v1/k8s-clusters/{id}`
+  - `GET /api/v1/k8s-clusters/{id}/kubeconfig`（ANI 鉴权的租户 kubeconfig）
+
+- [ ] `M1-K8S-B`：原生 K8s API 代理
+  - `ANY /api/v1/k8s-clusters/{id}/api/*`（透明代理到 vCluster API Server）
+  - ANI JWT 验证 → 路由到对应 vCluster → 返回原生 K8s 响应
+  - 支持 kubectl、Helm、Argo CD 等原生工具链
+  - 可观测：代理请求记录审计日志
+
+- [ ] `M1-K8S-C`：节点池管理
+  - `CRUD /api/v1/k8s-clusters/{id}/node-pools`
+  - 支持扩缩容、GPU 节点池
+
+- [ ] `M1-K8S-D`（P1）：Karmada 多集群联邦
+  - `POST /api/v1/k8s-federation`（注册联邦，Karmada 控制面）
+  - `CRUD /api/v1/k8s-federation/{id}/propagation-policies`
+  - 支持跨集群工作负载分发
+
+### 模块 M1-PLATFORM-SVC：平台支撑服务 API
+
+**目标：** 补齐 PaaS 服务凭据注入、内部服务发现、计量等平台级能力缺口。
+
+**代码批次规划：**
+
+- [ ] `M1-ENCRYPT-A`：国密加解密 API
+  - `CRUD /api/v1/encryption/keys`（SM4 密钥管理，轮换/吊销）
+  - `POST /api/v1/encryption/seal`（加密对象存储路径）
+  - `POST /api/v1/encryption/unseal-token`（生成解密令牌，Init Container 使用）
+
+- [ ] `M1-SECRETS-A`：密钥管理 API
+  - `CRUD /api/v1/secrets`（KV 对，仅元数据可读，明文不返回）
+  - `POST /api/v1/secrets/{id}/bindings`（绑定到实例，注入为环境变量/文件挂载）
+  - 底层：K8s Secret，ANI RBAC 多租户隔离
+
+- [ ] `M1-REGISTRY-A`：镜像仓库 API
+  - `CRUD /api/v1/registry/repositories`
+  - `GET /api/v1/registry/repositories/{repo}/tags`
+  - `POST /api/v1/registry/repositories/{repo}/permissions`
+  - `GET /api/v1/registry/images/{image}/scan-result`（Trivy 扫描结果）
+
+- [ ] `M1-METER-A`：用量计量 API
+  - `GET /api/v1/metering/usage`（按租户/时间段/资源类型）
+  - `GET /api/v1/metering/usage/summary`（汇总报表）
+  - `POST /api/v1/metering/events`（Services 层上报用量，如 Token 数）
+
+- [ ] `M1-OBS-A`：可观测性 API
+  - `GET /api/v1/observability/metrics`（PromQL 代理查询，不暴露 Prometheus 地址）
+  - `CRUD /api/v1/observability/alarms`（告警规则管理）
+  - `POST /api/v1/observability/alarms/{id}/actions`（触发/静默告警）
+
+- [ ] `M1-SVC-EP-A`：服务目录 / 内部 DNS API
+  - `CRUD /api/v1/service-endpoints`
+  - Services 层注册 PaaS 服务的稳定内部域名（如 `postgres.prod.ani.internal`）
+  - 底层：CoreDNS 自定义 zone 动态管理
+
+- [ ] `M1-NOTIFY-A`：事件通知 API
+  - `CRUD /api/v1/notifications/subscriptions`（订阅事件：webhook/email/内部消息）
+  - `GET /api/v1/notifications/events`（通知历史查询）
+
+### 模块 M1-DPU：DPU 加速节点纳管
+
+**目标：** 基于 NVIDIA DPF 实现 DPU K8s 原生管理，为高性能 AI 推理节点提供网络/存储卸载能力。
+
+**代码批次规划：**
+
+- [ ] `M1-DPU-A`（P2）：DPU 库存与能力查询
+  - `GET /api/v1/dpu-inventory/nodes`（DPU 装备节点列表，含型号/固件/卸载能力）
+  - `GET /api/v1/dpu-inventory/availability`（可用 DPU 加速能力查询）
+  - NVIDIA DPF Operator 部署，DPU 节点标签约定
+
+- [ ] `M1-DPU-B`（P2）：实例 DPU 加速规格支持
+  - 实例 spec 扩展 `acceleration.dpu.offloads`（network-sdn/storage-nvmeof/security）
+  - Kata RuntimeClass 与 DPU-backed OVN 集成
+  - BM + DPU 组合配置模板
 
 ---
 
