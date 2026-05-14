@@ -100,21 +100,6 @@
 
 ---
 
-### Phase 2 延期条目（已从 v1.0.0 范围移出）
-
-以下条目在当前版本中**不实现**，显式推迟到 2026-09-30 之后的 Phase 2 迭代，届时由"生意"驱动优先级：
-
-| 条目 | 理由 |
-|---|---|
-| **M1-BM-A**（裸金属 / Metal3 接入）| 无 Phase 1 Services P0 依赖；需物理机环境才能测试；独立 2-3 周工程量 |
-| **M1-K8S-A**（K8s 集群管理 / vCluster）| 无 Phase 1 Services P0 依赖；复杂度高；Phase 2 按需引入 |
-| **M1-DPU-A**（DPU 节点纳管）| 需专用 BlueField 硬件；Phase 2 |
-| **SDK-JAVA-A**（Java SDK）| 一天生成任务，Phase 2 按需生成；不阻塞 Services 团队 |
-| **M1-SVC-EP-A**（服务目录 / 内部 DNS）| PaaS 依赖；Phase 2 |
-| **M1-NOTIFY-A**（事件通知 API）| 非 Services P0 阻塞；Phase 2 |
-
----
-
 ### Sprint 计划总览
 
 ```
@@ -562,93 +547,7 @@ ANI Services P0：
 
 **已实现能力（简写）：** M1-INFRA-A/B/C/D/E/F + M1-GPU-A + M1-RUNTIME-A + M1-INSTANCE-A~S + M1-E2E-A/B + ARCH-ADAPTER 系列
 
-**当前实现对齐（2026-05-11，已全部完成）：**
-- `M1-INFRA-A`：已新增基础设施代码化基线，覆盖 `ani-system` 命名空间、平台依赖配置占位、默认拒绝 NetworkPolicy、控制面 ServiceAccount、Helm umbrella chart values contract。
-- `M1-INFRA-B`：已新增组件安装 profile 和基础设施依赖合同，覆盖 PostgreSQL/CloudNativePG、NATS JetStream、Redis、MinIO、Milvus、Harbor。
-- `M1-INFRA-C`：已新增 KubeOVN 租户 VPC/Subnet 模板、租户默认拒绝 NetworkPolicy、Gateway-only ingress、AI Agent 沙箱 egress 限制模板。
-- `ARCH-ADAPTER-A / M1-ARCH-A`：已完成开源组件松耦合适配器架构设计。
-- `ARCH-ADAPTER-B`：已新增 `pkg/ports`、`pkg/adapters` 与 `bootstrap.Capabilities` 骨架，后续新代码必须优先使用 capability ports。
-- `ARCH-ADAPTER-GUARD-A`：已新增组件 SDK 直接导入扫描与 coupling-level allowlist。
-- `ARCH-ADAPTER-C`：已完成第一批低风险迁移，auth JWT blocklist 使用 `CacheStore`，task outbox publish 使用 `MessageBus`。
-- `M1-INFRA-D`：已新增 cluster preflight validation profile，用于 attach-k8s/offline 环境预检 KubeOVN CRD、Secret、StorageClass 和 NetworkPolicy API。
-- `ARCH-ADAPTER-C-2`：已将 pgx/metadata 直接依赖按 `bounded_direct` 分类，保留 PostgreSQL/RLS 核心路径稳定性。
-- `M2.2-AUTH-E`：已为 JWT blocklist 增加 PostgreSQL 持久化兜底和 CacheStore 快路径。
-- `M2.2-AUTH-F`：已新增 refresh token 持久化表、refresh token 校验、RS256 AccessToken 签发能力；Dex/OIDC callback 后续只需创建 refresh token 记录。
-- `M2.2-AUTH-G`：已新增 OIDC 登录 begin/callback RPC 边界、state 缓存和授权 URL 构造；code exchange / ID token verifier 待下一阶段接入 Dex。
-- `M2.2-AUTH-H`：已实现 OIDC code exchange、静态 RS256 ID token verifier、用户 upsert、角色映射、refresh token 创建和 TokenPair 签发。
-- `M2.2-AUTH-I`：已实现 OIDC JWKS discovery 与 `kid` 公钥选择；静态 RS256 公钥继续作为离线环境 fallback。
-- `M2.2-AUTH-J`：已实现 OIDC group 到 ANI role 的显式映射；默认只授予 `user`，高权限角色必须通过 `AUTH_OIDC_GROUP_ROLE_MAP_JSON` 白名单配置。
-- `M1-INFRA-E`：已新增 GPU scheduling baseline，覆盖 GPU 节点标签契约、Volcano Queue、HAMi 设备插件资源契约、DCGM 观测指标契约与 GPU 预检模板。
-- `M2.2-AUTH-K`：已新增 auth-service 集成测试剖面，覆盖 OIDC Begin/Complete、refresh token 续签和 ValidateToken 验证链路。
-- `M1-INFRA-F`：已新增 GPU scheduling preflight/e2e hardening，覆盖可执行预检 Job、最小 RBAC、严格运行时开关、GPU smoke workload 模板和离线契约校验。
-- `M1-GPU-A`：已新增异构 GPU 发现与调度契约，覆盖 NVIDIA/Huawei/Hygon、多型号、内核/驱动/运行时兼容、资源名映射和 `GPUInventory` port。
-- `M1-RUNTIME-A`：已补齐平台实例运行时抽象，覆盖传统 VM、普通容器、GPU 容器、推理实例、Notebook、Agent Sandbox 和 Batch Job，并新增 `WorkloadRuntime` port。
-- `M1-INSTANCE-A`：已补齐核心实例对象、全生命周期动作/状态、网络平面与存储附件契约；VM 与 Pod 可按业务需要共享 `tenant_vpc`，平台服务/存储/管理流量分别走 `foundation_mesh`、`storage`、`management`。
-- `M1-INSTANCE-B`：已新增 `PlanningRuntime` 实例规划器，覆盖 VM/容器/GPU 容器创建前网络、存储、GPUInventory、生命周期状态机校验与计划态记录。
-- `M1-INSTANCE-C`：已新增 Kubernetes/KubeVirt provider dry-run renderer，规划后输出 VM `VirtualMachine`、容器/GPU 容器 `Deployment`、批任务 `Job` manifest，不直接创建集群资源。
-- `M1-INSTANCE-D`：已新增本地 admission guardrail，审查 dry-run manifest 类型、租户/实例标签、网络平面注解，并拒绝 hostNetwork/privileged 风险。
-- `M1-INSTANCE-E`：已新增实例计划/渲染/准入结果持久化与审计，覆盖 `WorkloadPlanAuditStore`、`MetadataPlanAuditStore` 和 `instance_plan_audits` 租户 RLS 表。
-- `M1-INSTANCE-F`：已新增 provider dry-run executor 边界，覆盖 `WorkloadProviderDryRun`、本地 provider/kind/apiVersion 校验和未来 Kubernetes `dryRun=All` 执行契约。
-- `M1-INSTANCE-G`：已新增 provider apply/create 执行门控，覆盖 `WorkloadProviderApply`、默认关闭执行开关、审计 ID、用户/租户、权限证明、admission 和 dry-run 证据校验。
-- `M1-INSTANCE-H`：已新增实例状态回写/生命周期 reconcile 契约，覆盖 `WorkloadStatusReconciler`、provider observation 标准化、phase 映射和 apply/audit/resource refs 关联校验。
-- `M1-INSTANCE-I`：已新增 provider status reader 与实例创建编排 API，覆盖 `WorkloadProviderStatusReader`、`WorkloadInstanceOrchestrator` 和 create 链路端到端编排。
-- `M1-INSTANCE-J`：已新增实例持久化/查询 API 契约，覆盖 `WorkloadInstanceStore`、`MetadataInstanceStore`、`workload_instances` 租户 RLS 表和 orchestrator 状态写入。
-- `M1-INSTANCE-K`：已新增 Kubernetes/KubeVirt provider adapter 边界，覆盖 `KubernetesProviderAdapter`、`KubernetesProviderClient`、server-side dry-run、受控 apply 和 provider status observation。
-- `M1-INSTANCE-L`：已新增实例服务 API 层，覆盖 `WorkloadInstanceService`、`LocalInstanceService`，对 VM、普通容器和 GPU 容器提供 Create/Get/List 入口。
-- `M1-INSTANCE-M`：已新增实例生命周期与可视化运维 API，覆盖 Start/Stop/Restart/Resize/Delete 和 logs/events/metrics/terminal/exec ops 边界。
-- `M1-E2E-A`：已新增 M1 端到端集成剖面，覆盖 VM、普通容器、GPU 容器的 create/lifecycle/query/ops 合同链路。
-- `M1-INSTANCE-N`：已新增 Kubernetes provider 执行剖面，覆盖 `KubernetesProviderClient` server-side dry-run、受控 apply、observe 与 orchestrator 集成合同。
-- `M1-INSTANCE-O`：已新增 adapter-owned `KubernetesRESTClient`，通过标准库 HTTP 实现 dryRun=All、server-side apply 和 Deployment/Job/KubeVirt VM observe。
-- `M1-INSTANCE-P`：已新增 bootstrap/config provider wiring，支持 `WORKLOAD_PROVIDER=kubernetes_rest` 接入 `KubernetesRESTClient`，默认 local 且 apply 关闭。
-- `M1-INSTANCE-Q`：已新增 Kubernetes lifecycle execution，覆盖 `WorkloadInstanceLifecycleExecutor`、`KubernetesLifecycleExecutor` 和 start/stop/restart/resize/delete provider 执行边界。
-- `M1-INSTANCE-R`：已新增 Kubernetes visual ops execution，覆盖 `KubernetesInstanceOps` 和 logs/events/metrics/terminal/exec provider 执行边界。
-- `M1-E2E-B`：已新增 M1 real provider integration regression profile，统一覆盖 Kubernetes REST provider create/observe/lifecycle/ops 链路。
-- `DEMO-INSTANCE-CONSOLE-A`：已新增阶段性实例 Demo API 与 Console 页面，提前展示 VM、普通容器、GPU 容器 create/lifecycle/ops 体验；该变化属于展示层，不改变 M1 核心契约。
-- `M1-INSTANCE-S`：已新增 VM console/VNC/serial remote ops session 边界，支持 KubeVirt、OpenStack、VMware 与主流公有云 console 协议映射；业务层只接收 session metadata，不直接调用 provider console API。
-- `DEMO-INSTANCE-WORKSPACE-UI-A`：已将实例 Demo 重构为生产控制台候选设计，覆盖 VM、普通容器、GPU 容器的创建、生命周期、运维与独立控制台页面。
-- `2026-05-12-demo-handoff`：已记录 Demo 暂停点、明日启动步骤、mock 展示边界和验证命令；mock 只用于演示信息架构和前端体验，不代表模型、知识库、用量、审计等生产 API 已完成。
-- 阶段验证：M1/M2 前序代码阶段 `make gen-proto` 已通过；当前工作区 `make validate-infra`、`make test`、`make build` 已通过。
-- 进度记录文件：`repo/development-records/m1-infra-a-baseline.md`。
-- 进度记录文件：`repo/development-records/m1-infra-b-component-profiles.md`。
-- 进度记录文件：`repo/development-records/m1-infra-c-network-isolation.md`。
-- 进度记录文件：`repo/development-records/m1-arch-a-component-adapter-design.md`。
-- 进度记录文件：`repo/development-records/arch-adapter-b-ports-adapters-skeleton.md`。
-- 进度记录文件：`repo/development-records/arch-adapter-c-first-migration.md`。
-- 进度记录文件：`repo/development-records/m1-infra-d-cluster-preflight.md`。
-- 进度记录文件：`repo/development-records/arch-adapter-c-2-metadata-boundaries.md`。
-- 进度记录文件：`repo/development-records/m2-2-auth-e-durable-token-blocklist.md`。
- - 进度记录文件：`repo/development-records/m2-2-auth-f-refresh-token-foundation.md`。
- - 进度记录文件：`repo/development-records/m2-2-auth-g-oidc-boundary.md`。
- - 进度记录文件：`repo/development-records/m2-2-auth-i-oidc-jwks.md`。
- - 进度记录文件：`repo/development-records/m2-2-auth-j-oidc-group-mapping.md`。
- - 进度记录文件：`repo/development-records/m2-2-auth-h-oidc-code-exchange.md`。
-- 进度记录文件：`repo/development-records/m1-infra-e-gpu-scheduling-baseline.md`。
-- 进度记录文件：`repo/development-records/m2-2-auth-k-auth-integration-profile.md`。
-- 进度记录文件：`repo/development-records/m1-infra-f-gpu-preflight-e2e.md`。
-- 进度记录文件：`repo/development-records/m1-gpu-a-heterogeneous-gpu-contract.md`。
-- 进度记录文件：`repo/development-records/m1-runtime-a-workload-runtime.md`。
-- 进度记录文件：`repo/development-records/m1-instance-a-instance-fabric.md`。
-- 进度记录文件：`repo/development-records/m1-instance-b-planning-runtime.md`。
-- 进度记录文件：`repo/development-records/m1-instance-c-provider-renderer.md`。
-- 进度记录文件：`repo/development-records/m1-instance-d-admission-guardrail.md`。
-- 进度记录文件：`repo/development-records/m1-instance-e-plan-audit.md`。
-- 进度记录文件：`repo/development-records/m1-instance-f-provider-dry-run.md`。
-- 进度记录文件：`repo/development-records/m1-instance-g-provider-apply-gate.md`。
-- 进度记录文件：`repo/development-records/m1-instance-h-status-reconcile.md`。
-- 进度记录文件：`repo/development-records/m1-instance-i-orchestrator.md`。
-- 进度记录文件：`repo/development-records/m1-instance-j-instance-store.md`。
-- 进度记录文件：`repo/development-records/m1-instance-k-provider-adapter.md`。
-- 进度记录文件：`repo/development-records/m1-instance-l-instance-service.md`。
-- 进度记录文件：`repo/development-records/m1-instance-m-lifecycle-ops.md`。
-- 进度记录文件：`repo/development-records/m1-e2e-a-instance-profile.md`。
-- 进度记录文件：`repo/development-records/m1-instance-n-kubernetes-provider-execution.md`。
-- 进度记录文件：`repo/development-records/m1-instance-o-kubernetes-rest-client.md`。
-- 进度记录文件：`repo/development-records/m1-instance-p-kubernetes-bootstrap-wiring.md`。
-- 进度记录文件：`repo/development-records/m1-instance-q-kubernetes-lifecycle-execution.md`。
-- 进度记录文件：`repo/development-records/m1-instance-r-kubernetes-ops-execution.md`。
-- 进度记录文件：`repo/development-records/m1-e2e-b-real-provider-profile.md`。
-- 后续开始衔接模块 3 模型管理平台，或补真实集群 smoke profile。
-- 下一阶段规划已完成：`repo/development-records/2026-05-11-next-development-plan.md`。
+**已完成批次完整列表：** → `repo/development-records/README.md`
 
 #### 1.1 Kubernetes 集群
 
@@ -954,31 +853,11 @@ ANI Services P0：
   - 查询：`GET /api/v1/tasks/{id}` → `{ status, progress, result }`
   - Webhook 回调：任务完成后主动推送到客户配置的 URL
   - **开源组件：** NATS JetStream 2.10+
-  - **当前实现对齐（2026-05-11）：**
-    - 当前仍属于 `模块 2 -> 2.1 Gateway 骨架 -> NATS JetStream 异步任务框架`，尚未进入 `模块 3：模型管理平台`。
-    - 代码生成批次命名统一为 `M2.1-TASK-A/B/C`；历史记录里的 `Stage 3A/3B/3C` 只是旧的内部切片名，不代表 `ANI-06` 的模块 3。
-    - `M2.1-TASK-A`：已实现最小 `task-service` 查询接口，支持 `GetTask`，读取前设置租户上下文以配合 PostgreSQL RLS。
-    - `M2.1-TASK-B`：已实现 `transactional outbox` 仓储与 NATS outbox publisher，使用 `FOR UPDATE SKIP LOCKED` 拉取未发布事件。
-    - `M2.1-TASK-C`：已实现 worker mutation RPC，包括任务领取、租约心跳、进度更新、失败、完成；已修正 `task_service.proto` 的租户/worker 安全上下文。
-    - 进度记录文件：
-      - `repo/development-records/m2-1-task-a-b-task-service-outbox.md`
-      - `repo/development-records/m2-1-task-c-worker-mutations.md`
-      - `repo/development-records/2026-05-11-handoff-codex-cloud.md`
-    - 当前验证状态：`make gen-proto`、`make test`、`make build` 已通过。
+  - **已完成：** M2.1-TASK-A/B/C（task-service + outbox），详见 `repo/development-records/README.md`
 
-#### 2.2 认证授权（Go）（M2）
+#### 2.2 认证授权（Go）（M2）✅ 已完成
 
-**当前实现对齐（2026-05-11）：**
-- `M2.2-AUTH-A`：已新增最小 `auth-service`，实现内部 `ValidateToken` 的 RS256 JWT 校验和基础 `CheckPermission` 角色规则。
-- `M2.2-AUTH-B`：已将 ANI Gateway Auth/RBAC middleware 接入 auth-service gRPC，并保留 `ANI_AUTH_MODE=dev`。
-- `M2.2-AUTH-C`：已实现 RLS-safe API Key 创建、列表、吊销和验证；API Key 原文内嵌 tenant UUID，查询前设置 PostgreSQL RLS tenant context，不引入 `BYPASSRLS`。
-- 已保留明确边界：传统 `Login` 暂不实现；OIDC begin/callback 已支持 code exchange、JWKS / 静态公钥 ID token verifier 和显式 group-role 映射；`RefreshToken` 已通过持久化 refresh token 换发 AccessToken；`RevokeToken` 已通过 PostgreSQL + `CacheStore` 实现 JWT blocklist；API Key 管理已完成 RLS-safe lifecycle。
-- 验证命令：`make gen-proto`、`make validate-infra`、`make test`、`make build` 已通过。
-- 进度记录文件：`repo/development-records/m2-2-auth-a-auth-service-foundation.md`。
-- 进度记录文件：`repo/development-records/m2-2-auth-b-gateway-auth-wiring.md`。
-- 进度记录文件：`repo/development-records/m2-2-auth-c-api-keys.md`。
-- 下一阶段候选：`M2.2-AUTH-D`，Dex/OIDC 登录集成或 API Key RLS 集成测试。
-- 规划文件：`repo/development-records/2026-05-11-next-development-plan.md`。
+> 已完成：M2.2-AUTH-A~K（JWT/OIDC/JWKS/RBAC/API Key），详见 `repo/development-records/README.md`
 
 - [ ] **Dex（OIDC IdP）**
   - 对接企业 AD/LDAP（客户现有用户体系，无需重建账号）
@@ -997,10 +876,10 @@ ANI Services P0：
 
 ---
 
-### 模块 3：模型管理平台 ⏳ ANI Services — Sprint 5~6 实现
+### 模块 3：模型管理平台 ⏳ ANI Services — Sprint 6 实现（SVC-MODEL-A）
 
 > **归属：ANI Services 层**（另一小组负责，调用 Core API）
-> Sprint 6 中 SVC-MODEL-A 实现此模块的核心功能。
+> Sprint 6 中 SVC-MODEL-A 实现核心功能（依赖 Sprint 5 的加解密 API）。
 
 **目标：** IT 管理员无需懂 AI，把模型文件变成一个可调用的内网 API。
 
