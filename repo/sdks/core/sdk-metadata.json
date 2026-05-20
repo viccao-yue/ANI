@@ -377,5 +377,39 @@
     "VectorStoreSearchResponse",
     "VectorStoreState",
     "WorkloadIdentityBinding"
+  ],
+  "idempotencyOperations": [
+    "createStorageFilesystem",
+    "createInstance",
+    "applyInstanceLifecycle",
+    "createNetworkLoadBalancer",
+    "createNetworkSecurityGroup",
+    "createNetworkSubnet",
+    "createNetworkVPC",
+    "createStorageObject",
+    "createVectorStore",
+    "createStorageVolume"
+  ],
+  "cursorPaginationOperations": [
+    "listStorageFilesystems",
+    "listInstances",
+    "listInstanceOperations",
+    "listNetworkLoadBalancers",
+    "listNetworkSecurityGroups",
+    "listNetworkSubnets",
+    "listNetworkVPCs",
+    "listStorageObjects",
+    "listVectorStores",
+    "listStorageVolumes"
+  ],
+  "errorCodes": [
+    "BAD_REQUEST",
+    "CONFLICT",
+    "FORBIDDEN",
+    "INTERNAL_ERROR",
+    "NOT_FOUND",
+    "NOT_IMPLEMENTED",
+    "RATE_LIMIT_EXCEEDED",
+    "UNAUTHORIZED"
   ]
 }

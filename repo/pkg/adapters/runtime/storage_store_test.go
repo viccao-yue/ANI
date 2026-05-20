@@ -90,9 +90,10 @@ func TestLocalStorageServicePersistsCreateAndDelete(t *testing.T) {
 	)
 
 	volume, err := service.CreateVolume(context.Background(), ports.StorageVolumeCreateRequest{
-		TenantID: storageStoreTenantID,
-		Name:     "persisted-volume",
-		SizeGiB:  10,
+		TenantID:       storageStoreTenantID,
+		IdempotencyKey: "persisted-volume",
+		Name:           "persisted-volume",
+		SizeGiB:        10,
 	})
 	if err != nil {
 		t.Fatalf("CreateVolume() error = %v", err)

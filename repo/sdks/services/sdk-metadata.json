@@ -133,5 +133,16 @@
     "KnowledgeBase",
     "Model",
     "ModelVersion"
+  ],
+  "idempotencyOperations": [],
+  "cursorPaginationOperations": [
+    "listModels"
+  ],
+  "errorCodes": [
+    "BAD_REQUEST",
+    "CONFLICT",
+    "FORBIDDEN",
+    "NOT_FOUND",
+    "UNAUTHORIZED"
   ]
 }

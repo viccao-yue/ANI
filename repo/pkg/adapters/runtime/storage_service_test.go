@@ -10,16 +10,30 @@ import (
 func TestLocalStorageServiceVolumeDevProfile(t *testing.T) {
 	service := NewLocalStorageService()
 	volume, err := service.CreateVolume(context.Background(), ports.StorageVolumeCreateRequest{
-		TenantID:     "tenant-a",
-		Name:         "data-a",
-		SizeGiB:      100,
-		StorageClass: "fast",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "storage-volume-a",
+		Name:           "data-a",
+		SizeGiB:        100,
+		StorageClass:   "fast",
 	})
 	if err != nil {
 		t.Fatalf("CreateVolume() error = %v", err)
 	}
 	if volume.VolumeID == "" || volume.State != ports.StorageResourceAvailable || volume.StorageClass != "fast" {
 		t.Fatalf("volume = %#v, want available fast volume", volume)
+	}
+	replay, err := service.CreateVolume(context.Background(), ports.StorageVolumeCreateRequest{
+		TenantID:       "tenant-a",
+		IdempotencyKey: "storage-volume-a",
+		Name:           "data-a-retry",
+		SizeGiB:        200,
+		StorageClass:   "slow",
+	})
+	if err != nil {
+		t.Fatalf("CreateVolume replay error = %v", err)
+	}
+	if replay.VolumeID != volume.VolumeID || replay.SizeGiB != volume.SizeGiB {
+		t.Fatalf("replay volume = %#v, want original %#v", replay, volume)
 	}
 	if _, err := service.GetVolume(context.Background(), ports.StorageResourceGetRequest{TenantID: "tenant-b", ResourceID: volume.VolumeID}); err == nil {
 		t.Fatalf("GetVolume from another tenant succeeded, want isolation error")
@@ -36,10 +50,11 @@ func TestLocalStorageServiceVolumeDevProfile(t *testing.T) {
 func TestLocalStorageServiceFilesystemAndObjectDevProfile(t *testing.T) {
 	service := NewLocalStorageService()
 	filesystem, err := service.CreateFilesystem(context.Background(), ports.StorageFilesystemCreateRequest{
-		TenantID: "tenant-a",
-		Name:     "shared",
-		Protocol: "cephfs",
-		SizeGiB:  500,
+		TenantID:       "tenant-a",
+		IdempotencyKey: "storage-fs-a",
+		Name:           "shared",
+		Protocol:       "cephfs",
+		SizeGiB:        500,
 	})
 	if err != nil {
 		t.Fatalf("CreateFilesystem() error = %v", err)
@@ -48,11 +63,12 @@ func TestLocalStorageServiceFilesystemAndObjectDevProfile(t *testing.T) {
 		t.Fatalf("filesystem = %#v, want cephfs endpoint", filesystem)
 	}
 	object, err := service.CreateObject(context.Background(), ports.StorageObjectCreateRequest{
-		TenantID:    "tenant-a",
-		Bucket:      "models",
-		Key:         "llm/model.bin",
-		SizeBytes:   1024,
-		ContentType: "application/octet-stream",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "storage-object-a",
+		Bucket:         "models",
+		Key:            "llm/model.bin",
+		SizeBytes:      1024,
+		ContentType:    "application/octet-stream",
 	})
 	if err != nil {
 		t.Fatalf("CreateObject() error = %v", err)

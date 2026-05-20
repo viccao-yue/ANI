@@ -1,0 +1,186 @@
+batch: SPEC-CORE-BETA
+phase: Phase 1 / Sprint 4
+status: in_progress
+updated_at: 2026-05-21
+scope:
+  description: Sprint 1-3 Core P0 path/schema Beta readiness matrix.
+  included_paths:
+    - /healthz
+    - /readyz
+    - /auth/oidc/begin
+    - /auth/token
+    - /auth/refresh
+    - /auth/logout
+    - /auth/api-keys
+    - /auth/api-keys/{key_id}
+    - /instances
+    - /instances/{instance_id}
+    - /instances/{instance_id}/lifecycle
+    - /instances/{instance_id}/console
+    - /instances/{instance_id}/operations
+    - /instance-operations/{operation_id}
+    - /networks/vpcs
+    - /networks/vpcs/{vpc_id}
+    - /networks/subnets
+    - /networks/subnets/{subnet_id}
+    - /networks/security-groups
+    - /networks/security-groups/{security_group_id}
+    - /networks/load-balancers
+    - /networks/load-balancers/{load_balancer_id}
+    - /volumes
+    - /volumes/{volume_id}
+    - /filesystems
+    - /filesystems/{filesystem_id}
+    - /objects
+    - /objects/{object_id}
+    - /vector-stores
+    - /vector-stores/{vector_store_id}
+    - /vector-stores/{vector_store_id}/search
+    - /branding
+    - /tasks/{task_id}
+    - /metering/usage
+  excluded_paths:
+    - reason: Services business resources are owned by api/openapi/services/v1.yaml.
+      prefixes: [/models, /inference-services, /knowledge-bases]
+compatibility:
+  allowed_additive_changes:
+    - Add optional request fields.
+    - Add response fields.
+    - Add endpoints.
+    - Add enum values when clients can safely ignore unknown values.
+  forbidden_breaking_changes:
+    - Remove or rename fields.
+    - Change field types.
+    - Remove endpoints.
+    - Change HTTP methods.
+    - Change standard error semantics.
+    - Move Services business paths back into the Core API.
+guardrails:
+  - server_url_core_v1
+  - services_paths_excluded_from_core
+  - rbac_scope_on_p0_paths
+  - cursor_pagination_on_list_paths
+  - idempotency_key_on_p0_create_paths
+  - state_and_dev_profile_on_resource_schemas
+  - standard_error_responses
+  - no_unowned_not_implemented_on_core_p0
+  - core_v1_compatibility_baseline
+p0_resources:
+  - name: instances
+    record_schema: InstanceRecord
+    list_path: /instances
+    list_response_schema: InstanceListResponse
+    create_path: /instances
+    create_request_schema: CreateInstanceRequest
+    create_operation_id: createInstance
+    create_rbac_scope: scope:instances:create
+    required_record_fields: [id, tenant_id, name, state, created_at, updated_at, dev_profile]
+    state_schema: InstanceRecord.state
+  - name: network_vpcs
+    record_schema: NetworkVPC
+    list_path: /networks/vpcs
+    list_response_schema: NetworkVPCListResponse
+    create_path: /networks/vpcs
+    create_request_schema: CreateNetworkVPCRequest
+    create_operation_id: createNetworkVPC
+    create_rbac_scope: scope:networks:create
+    required_record_fields: [id, tenant_id, name, state, created_at, updated_at, dev_profile]
+    state_schema: NetworkResourceState
+  - name: network_subnets
+    record_schema: NetworkSubnet
+    list_path: /networks/subnets
+    list_response_schema: NetworkSubnetListResponse
+    create_path: /networks/subnets
+    create_request_schema: CreateNetworkSubnetRequest
+    create_operation_id: createNetworkSubnet
+    create_rbac_scope: scope:networks:create
+    required_record_fields: [id, tenant_id, name, state, created_at, updated_at, dev_profile]
+    state_schema: NetworkResourceState
+  - name: network_security_groups
+    record_schema: NetworkSecurityGroup
+    list_path: /networks/security-groups
+    list_response_schema: NetworkSecurityGroupListResponse
+    create_path: /networks/security-groups
+    create_request_schema: CreateNetworkSecurityGroupRequest
+    create_operation_id: createNetworkSecurityGroup
+    create_rbac_scope: scope:networks:create
+    required_record_fields: [id, tenant_id, name, state, created_at, updated_at, dev_profile]
+    state_schema: NetworkResourceState
+  - name: network_load_balancers
+    record_schema: NetworkLoadBalancer
+    list_path: /networks/load-balancers
+    list_response_schema: NetworkLoadBalancerListResponse
+    create_path: /networks/load-balancers
+    create_request_schema: CreateNetworkLoadBalancerRequest
+    create_operation_id: createNetworkLoadBalancer
+    create_rbac_scope: scope:networks:create
+    required_record_fields: [id, tenant_id, name, state, created_at, updated_at, dev_profile]
+    state_schema: NetworkResourceState
+  - name: storage_volumes
+    record_schema: StorageVolume
+    list_path: /volumes
+    list_response_schema: StorageVolumeListResponse
+    create_path: /volumes
+    create_request_schema: CreateStorageVolumeRequest
+    create_operation_id: createStorageVolume
+    create_rbac_scope: scope:volumes:create
+    required_record_fields: [id, tenant_id, name, state, created_at, updated_at, dev_profile]
+    state_schema: StorageResourceState
+  - name: storage_filesystems
+    record_schema: StorageFilesystem
+    list_path: /filesystems
+    list_response_schema: StorageFilesystemListResponse
+    create_path: /filesystems
+    create_request_schema: CreateStorageFilesystemRequest
+    create_operation_id: createStorageFilesystem
+    create_rbac_scope: scope:filesystems:create
+    required_record_fields: [id, tenant_id, name, state, created_at, updated_at, dev_profile]
+    state_schema: StorageResourceState
+  - name: storage_objects
+    record_schema: StorageObject
+    list_path: /objects
+    list_response_schema: StorageObjectListResponse
+    create_path: /objects
+    create_request_schema: CreateStorageObjectRequest
+    create_operation_id: createStorageObject
+    create_rbac_scope: scope:objects:create
+    required_record_fields: [id, tenant_id, state, created_at, updated_at, dev_profile]
+    state_schema: StorageResourceState
+  - name: vector_stores
+    record_schema: VectorStore
+    list_path: /vector-stores
+    list_response_schema: VectorStoreListResponse
+    create_path: /vector-stores
+    create_request_schema: CreateVectorStoreRequest
+    create_operation_id: createVectorStore
+    create_rbac_scope: scope:vector-stores:create
+    required_record_fields: [id, tenant_id, name, state, created_at, updated_at, dev_profile]
+    state_schema: VectorStoreState
+operation_paths:
+  - path: /instances/{instance_id}/lifecycle
+    method: post
+    operation_id: applyInstanceLifecycle
+    rbac_scope: scope:instances:update
+    request_schema: InstanceLifecycleRequest
+    requires_idempotency_key: true
+  - path: /instances/{instance_id}/console
+    method: post
+    operation_id: createInstanceConsoleSession
+    rbac_scope: scope:instances:console
+  - path: /instances/{instance_id}/operations
+    method: get
+    operation_id: listInstanceOperations
+    rbac_scope: scope:instances:read
+    list_response_schema: CursorPage
+  - path: /instance-operations/{operation_id}
+    method: get
+    operation_id: getInstanceOperation
+    rbac_scope: scope:instances:read
+  - path: /vector-stores/{vector_store_id}/search
+    method: post
+    operation_id: searchVectorStore
+    rbac_scope: scope:vector-stores:search
+remaining_work:
+  - SDK Beta packaging and publishing workflow.
+  - Mock Server package for Services team integration.
+  - API documentation generation and publishing workflow.

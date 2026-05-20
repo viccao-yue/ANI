@@ -60,10 +60,34 @@ export const schemas = [
   "Model",
   "ModelVersion"
 ] as const;
+export const idempotencyOperations = [] as const;
+export const cursorPaginationOperations = [
+  "listModels"
+] as const;
+export const errorCodes = [
+  "BAD_REQUEST",
+  "CONFLICT",
+  "FORBIDDEN",
+  "NOT_FOUND",
+  "UNAUTHORIZED"
+] as const;
 
 export interface ClientOptions {
   baseURL?: string;
   token?: string;
+}
+
+export interface RequestOptions {
+  body?: Record<string, unknown>;
+  params?: Record<string, string | number | boolean | undefined>;
+  headers?: Record<string, string>;
+}
+
+export interface APIError {
+  code: string;
+  message: string;
+  request_id: string;
+  details?: Record<string, unknown>;
 }
 
 export class Client {
@@ -78,4 +102,95 @@ export class Client {
   hasOperation(operationID: string): boolean {
     return operations.includes(operationID as typeof operations[number]);
   }
+
+  async request<T = unknown>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
+    const response = await fetch(this.url(path, options.params), {
+      method: method.toUpperCase(),
+      headers: this.headers(options.headers, options.body !== undefined),
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+    const payload = await this.decodeResponse(response);
+    if (!response.ok) {
+      if (payload && typeof payload === "object" && "code" in payload && "message" in payload) {
+        const data = payload as Record<string, unknown>;
+        throw apiError(String(data.code), String(data.message), String(data.request_id || ""), data.details as Record<string, unknown> | undefined);
+      }
+      throw new Error(`ANI API request failed: ${response.status}`);
+    }
+    return payload as T;
+  }
+
+  private url(path: string, params?: RequestOptions["params"]): string {
+    const base = this.baseURL.replace(/\/$/, "");
+    const relative = path.startsWith("/") ? path : `/${path}`;
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params || {})) {
+      if (value !== undefined) {
+        query.set(key, String(value));
+      }
+    }
+    const suffix = query.toString();
+    return `${base}${relative}${suffix ? `?${suffix}` : ""}`;
+  }
+
+  private headers(headers?: Record<string, string>, hasBody = false): Record<string, string> {
+    return {
+      Accept: "application/json",
+      ...(hasBody ? { "Content-Type": "application/json" } : {}),
+      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      ...(headers || {}),
+    };
+  }
+
+  private async decodeResponse(response: Response): Promise<unknown> {
+    if (response.status === 204) {
+      return undefined;
+    }
+    const text = await response.text();
+    if (!text) {
+      return undefined;
+    }
+    const contentType = response.headers.get("content-type") || "";
+    return contentType.includes("application/json") ? JSON.parse(text) : text;
+  }
+}
+
+export function newIdempotencyKey(prefix = "ani"): string {
+  const safePrefix = prefix || "ani";
+  const cryptoObj = globalThis.crypto;
+  if (cryptoObj?.randomUUID) {
+    return `${safePrefix}_${cryptoObj.randomUUID()}`;
+  }
+  const bytes = new Uint8Array(16);
+  if (cryptoObj?.getRandomValues) {
+    cryptoObj.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i += 1) {
+      bytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  return `${safePrefix}_${Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("")}`;
+}
+
+export function withIdempotencyKey<T extends Record<string, unknown>>(body: T, key = newIdempotencyKey()): T & { idempotency_key: string } {
+  return { ...body, idempotency_key: key };
+}
+
+export function cursorParams(limit?: number, cursor?: string): Record<string, string> {
+  const params: Record<string, string> = {};
+  if (limit !== undefined && limit > 0) {
+    params.limit = String(limit);
+  }
+  if (cursor) {
+    params.cursor = cursor;
+  }
+  return params;
+}
+
+export function isAPIErrorCode(code: string): boolean {
+  return errorCodes.includes(code as typeof errorCodes[number]);
+}
+
+export function apiError(code: string, message: string, requestID = "", details?: Record<string, unknown>): APIError {
+  return { code, message, request_id: requestID, ...(details ? { details } : {}) };
 }

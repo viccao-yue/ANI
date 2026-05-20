@@ -13,10 +13,11 @@ import (
 )
 
 type LocalVectorStoreService struct {
-	mu      sync.RWMutex
-	now     func() time.Time
-	backend ports.VectorStore
-	stores  map[string]ports.VectorStoreRecord
+	mu          sync.RWMutex
+	now         func() time.Time
+	backend     ports.VectorStore
+	stores      map[string]ports.VectorStoreRecord
+	idempotency map[string]string
 }
 
 type VectorStoreServiceOption func(*LocalVectorStoreService)
@@ -37,8 +38,9 @@ func WithVectorStoreBackend(backend ports.VectorStore) VectorStoreServiceOption 
 
 func NewLocalVectorStoreService(options ...VectorStoreServiceOption) *LocalVectorStoreService {
 	service := &LocalVectorStoreService{
-		now:    func() time.Time { return time.Now().UTC() },
-		stores: map[string]ports.VectorStoreRecord{},
+		now:         func() time.Time { return time.Now().UTC() },
+		stores:      map[string]ports.VectorStoreRecord{},
+		idempotency: map[string]string{},
 	}
 	for _, option := range options {
 		option(service)
@@ -50,6 +52,10 @@ func (s *LocalVectorStoreService) CreateVectorStore(ctx context.Context, request
 	if err := requireVectorStoreTenantAndName(request.TenantID, request.Name); err != nil {
 		return ports.VectorStoreRecord{}, err
 	}
+	idemKey, err := requireIdempotencyKey(request.TenantID, request.IdempotencyKey)
+	if err != nil {
+		return ports.VectorStoreRecord{}, err
+	}
 	if request.Dimension <= 0 {
 		return ports.VectorStoreRecord{}, fmt.Errorf("%w: vector store dimension must be greater than zero", ports.ErrInvalid)
 	}
@@ -57,6 +63,15 @@ func (s *LocalVectorStoreService) CreateVectorStore(ctx context.Context, request
 	if metric != "cosine" && metric != "l2" && metric != "ip" {
 		return ports.VectorStoreRecord{}, fmt.Errorf("%w: unsupported vector store metric %q", ports.ErrUnsupported, request.Metric)
 	}
+
+	s.mu.Lock()
+	if id, ok := s.idempotency[idemKey]; ok {
+		if record, exists := s.stores[id]; exists {
+			s.mu.Unlock()
+			return record, nil
+		}
+	}
+	s.mu.Unlock()
 
 	now := s.now().UTC()
 	record := ports.VectorStoreRecord{
@@ -79,6 +94,7 @@ func (s *LocalVectorStoreService) CreateVectorStore(ctx context.Context, request
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.stores[record.StoreID] = record
+	s.idempotency[idemKey] = record.StoreID
 	return record, nil
 }
 

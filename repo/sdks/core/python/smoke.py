@@ -3,9 +3,17 @@ import kubercloud_ani_core as sdk
 
 client = sdk.Client(token="token")
 assert client.base_url
+assert client.timeout > 0
 assert sdk.TITLE
 assert sdk.VERSION
 assert sdk.SCHEMAS
+assert sdk.new_idempotency_key("test").startswith("test_")
+payload = sdk.with_idempotency_key({"name": "demo"}, "fixed")
+assert payload["idempotency_key"] == "fixed"
+assert sdk.cursor_params(20, "next") == {"limit": 20, "cursor": "next"}
+api_error = sdk.APIError("BAD_REQUEST", "invalid request", "req_test")
+assert api_error.to_dict()["code"] == "BAD_REQUEST"
+assert sdk.is_api_error_code("BAD_REQUEST")
 assert sdk.OPERATIONS
 assert client.has_operation("listAPIKeys")
 

@@ -2,228 +2,107 @@
 
 This file provides mandatory guidance for Claude Code / Codex / Cursor / GPT coding agents working in this repository.
 
-> 本文件是 AI/人类开发的工程约定入口。详细产品规划、路线图和历史归档不在本文重复维护，统一从 `ANI-DOCS-INDEX.md` 跳转。
+> 本文件是 AI/人类开发的**轻量入口和强制规则索引**。动态进度、批次细节和历史记录不在本文重复维护；首次加载必须按本文的读取顺序进入真实来源。
 
 ---
 
 ## 0. 当前状态
 
 ```text
-当前阶段：Phase 1 / Sprint 4
-当前优先级：SPEC-CORE-BETA → API Beta 准备（SPEC-SPLIT-A 已完成）
+当前阶段：Phase 1 / Sprint 4 收尾
+当前状态：开发与验收完成，待提交 GitHub；提交后再切换下一 Sprint
 当前不是 Phase 2：Phase 2 是 2026-10 以后延期能力
 下一步入口：repo/CURRENT-SPRINT.md
 文档导航：ANI-DOCS-INDEX.md
-产品定义版本：V8.3
 首个正式版本目标：v1.0.0，2026-09-30
 ```
 
+当前 Sprint 4 已完成并需保持可追溯的批次标记：`SPEC-SPLIT-A`、`SPEC-CORE-BETA`、`SPEC-COMPAT-A`、`SDK-BETA-A`、`SDK-BETA-B`、`SDK-BETA-C`、`SDK-BETA-D`、`SDK-MOCK-SMOKE-A`、`SDK-MOCK-SMOKE-B`、`SDK-MOCK-SMOKE-C`、`SDK-MOCK-SMOKE-D`、`MOCK-A`、`DOC-API-A`、`SPRINT4-CLOSURE-A`。批次细节以 `repo/CURRENT-SPRINT.md` 和 `repo/development-records/README.md` 为准。
+
 ---
 
-## 1. 5 分钟快速上手
+## 1. 首次加载顺序
 
-### Step 1：先读入口
-
-按顺序读：
+每次新会话、切换模型、上下文压缩或准备继续开发时，按顺序读取：
 
 ```text
-1. ANI-DOCS-INDEX.md
-2. repo/CURRENT-SPRINT.md
-3. ANI-06-开发计划.md 的 Section 零和当前 Sprint
-4. repo/api/openapi/v1.yaml
-5. repo/pkg/ports/workload_runtime.go
+1. CLAUDE.md
+2. ANI-DOCS-INDEX.md
+3. repo/CURRENT-SPRINT.md
+4. ANI-06-开发计划.md 的 Section 零和当前 Sprint
+5. 本次任务直接相关的 API 契约、代码、测试和批次记录
 ```
 
-### Step 2：验证环境
-
-```bash
-cd repo
-make build
-make test
-make validate-architecture
-```
-
-如果失败，先看 `repo/CURRENT-SPRINT.md` 的「环境启动」和当前批次验收说明。
-
-### Step 3：知道当前要做什么
-
-当前执行只看 `repo/CURRENT-SPRINT.md`。不要从历史批次、旧 handoff 文档或 Phase 2 规划倒推出当前任务。
+只根据 `repo/CURRENT-SPRINT.md` 判断当前要做什么。不要从历史 handoff、旧批次记录、路线图远期规划或 Phase 2 内容倒推当前任务。
 
 ---
 
-## 2. 文档真实来源
+## 2. 真实来源
 
 | 问题 | 真实来源 |
 |---|---|
-| 文档导航和阅读顺序 | `ANI-DOCS-INDEX.md` |
-| 当前 Sprint 任务、状态、验收命令 | `repo/CURRENT-SPRINT.md` |
-| 全局进度、Services 解锁门禁、延期项 | `ANI-06-开发计划.md` |
-| 产品功能边界 | `ANI-02-产品功能设计.md` |
-| 路线图阶段与版本关系 | `ANI-03-产品路线图.md` |
-| 版本、tag、发布兼容性 | `ANI-12-版本管理策略.md` |
-| 代码实现规范 | `ANI-11-代码实现规范.md` |
-| 开源组件 ports/adapters 边界 | `ANI-13-开源组件松耦合适配器架构.md` |
-| 已完成批次归档 | `repo/development-records/README.md` |
+| 文档导航和读取顺序 | `ANI-DOCS-INDEX.md` |
+| 当前 Sprint、状态、验收命令 | `repo/CURRENT-SPRINT.md` |
+| 全局阶段、Services 解锁门禁、延期项 | `ANI-06-开发计划.md` |
+| 已完成批次索引 | `repo/development-records/README.md` |
+| 单批次实现与验证细节 | `repo/development-records/*.md` |
 | Core API 契约 | `repo/api/openapi/v1.yaml` |
 | Services API 契约 | `repo/api/openapi/services/v1.yaml` |
+| Core API Beta 准备矩阵 | `repo/api/core-beta-readiness.yaml` |
+| Core API v1 兼容性基线 | `repo/api/core-v1-compatibility-baseline.yaml` |
+| 产品边界、路线图、版本、代码规范、ports/adapters 细则 | `ANI-02`、`ANI-03`、`ANI-11`、`ANI-12`、`ANI-13` |
 
-若进度状态冲突，以 `ANI-06-开发计划.md` Section 零和 `repo/CURRENT-SPRINT.md` 为准。若工程约定冲突，以本文的强制规则为准。
-
----
-
-## 3. 分层架构强制约束
-
-ANI 分为两层：
-
-| 层 | 职责 | 强制边界 |
-|---|---|---|
-| ANI Core | 基础设施平台层：计算、存储、网络、身份、安全、计量、可观测、平台支撑 | 本小组负责；只输出 REST API、SDK、CLI；不得包含模型推理/RAG/PaaS 业务逻辑 |
-| ANI Services | 云服务层：IaaS 控制台、AI 全生命周期、AI-Native 应用、PaaS 托管服务 | 另一小组负责；只能通过 Core REST API / SDK 调用 Core；禁止 import Core 代码包或直接操作底层组件 |
-
-当前仓库中 `repo/services/model-service/` 和 `repo/services/kb-service/` 逻辑属于 ANI Services，暂存于 monorepo。Core 服务禁止调用它们；它们也不得 import Core 代码包，只能调用 Core API。
+进度状态冲突时，以 `ANI-06-开发计划.md` Section 零和 `repo/CURRENT-SPRINT.md` 为准。工程约定冲突时，以本文的强制规则为准。
 
 ---
 
-## 4. API 契约强制规则
+## 3. 强制架构边界
 
-1. `repo/api/openapi/v1.yaml` 是 ANI Core 对外 REST API 的唯一真实来源。
-2. 团队内统一称为 **API 契约**，避免说“OpenAPI 接口”或“OpenAI 接口”。
-3. 所有新 Core API 必须先改 API 契约，再写实现、测试和 SDK。
-4. Core API `servers[0].url` 必须为 `https://{host}/api/v1`。
-5. Services API `servers[0].url` 必须为 `https://{host}/api/v1/svc`。
-6. `repo/api/openapi/v1.yaml` 只能包含基础设施资源，例如 instances、networks、volumes、auth、gpu-inventory。
-7. models、inference-services、knowledge-bases 等业务资源必须维护在 `repo/api/openapi/services/v1.yaml`。
-8. Proto 是内部 gRPC 实现细节；当 Proto 与 REST schema 描述同一资源发生冲突时，以 API 契约为准。
-
-### 当前冻结节奏
-
-| 日期 | 门禁 |
-|---|---|
-| 2026-06-10 | Core API Alpha Freeze |
-| 2026-06-20 | SDK Alpha |
-| 2026-06-30 | Core Dev Profile Ready |
-| 2026-08-15 | Core API Beta Freeze |
-
-Services P0 依赖路径在对应门禁后不允许无 owner/date 的 stub、mock success 或 `NOT_IMPLEMENTED`。
+1. ANI 分为 ANI Core 和 ANI Services 两层。ANI Core 只负责基础设施平台能力，只输出 REST API、SDK、CLI；不得包含模型推理、RAG、PaaS 业务逻辑。
+2. ANI Services 只能通过 Core REST API / SDK 调用 Core；禁止 import Core 代码包或直接操作底层组件。
+3. `repo/services/model-service/` 和 `repo/services/kb-service/` 逻辑属于 ANI Services，暂存于 monorepo。Core 服务禁止调用它们。
+4. Services 业务资源如 `models`、`inference-services`、`knowledge-bases` 必须维护在 `repo/api/openapi/services/v1.yaml`，不得回流到 Core API。
+5. `CORE-DEV-PROFILE-A` 是 Core dev/local profile，不是 Services 业务 mock。Services 团队如需业务 mock，应在 Services 层自行建设。
 
 ---
 
-## 5. SDK 生成规则
+## 4. API 与 SDK 强制规则
 
-| SDK | 来源 |
-|---|---|
-| Go / Python / TypeScript / Java Core SDK | `repo/api/openapi/v1.yaml` |
-| Python / TypeScript / Java Services SDK | `repo/api/openapi/services/v1.yaml` |
-
-SDK 不得包含对方层资源类型。Services 团队使用 Core SDK，不 import Core 代码包。
-
----
-
-## 6. API 工程约定
-
-### 向后兼容
-
-Core API v1 生命周期内：
-
-- 允许新增可选 request 字段、response 字段、端点和枚举值。
-- 删除字段、改字段类型、删除端点、修改 HTTP 方法、修改错误语义均属于破坏性变更。
-- 破坏性变更必须新建 v2，或按 `ANI-12-版本管理策略.md` 判断版本影响。
-
-### 幂等性
-
-所有 POST 创建和有副作用的 PUT/PATCH 必须支持 `idempotency_key`：
-
-- 同一 `(tenant_id, idempotency_key)` 在 24 小时内返回同一结果。
-- 客户端重试必须复用同一个 idempotency_key。
-- SDK 应提供 idempotency_key 辅助能力。
-
-### 控制面与数据面分离
-
-- ani-gateway/auth-service 故障时，已运行 VM/容器/Sandbox 必须继续运行。
-- 状态对齐必须通过独立 reconcile controller 或等价后台机制完成，不能只依赖 API 请求触发。
-- 生命周期操作必须写入 operation timeline、审计、失败原因和重试资格。
-
-### Workload Identity
-
-运行中的实例调用 ANI Core API 禁止使用长期静态 API Key。P0 使用生命周期绑定 scoped API Key；P1 再升级为短期 token / IRSA 风格。
-
-### Core Dev Profile 边界
-
-`CORE-DEV-PROFILE-A` 是 Sprint 3 的 Core dev/local profile 收口批次，历史讨论中曾叫 `MOCK-DEV-A`。该批次只属于 ANI Core 团队职责，不是 Services 团队的业务 mock。
-
-Core 团队负责：
-
-- Core API P0 路径在无真实 provider 时仍可本地联调。
-- dev/local profile 的状态机、错误码、幂等、operation timeline、权限语义与真实实现保持一致。
-- 所有本地成功必须能被测试识别为 dev/local profile，不能伪装成 real provider。
-- 清理 Services P0 依赖路径上无 owner/date 的 `NOT_IMPLEMENTED`、空 stub 和假成功。
-
-Core 团队不负责：
-
-- models、inference-services、knowledge-bases 等 ANI Services 业务 mock。
-- Services 页面演示假数据、业务流程假实现、PaaS 托管服务 mock。
-- 让 Services 直接绕过 Core API/SDK 拼装 Core 行为。
-
-Services 团队如需业务 mock，应在 ANI Services 层自行建设；Core 只提供稳定、可测试、契约兼容的 Core dev/local profile 和 SDK。
+1. `repo/api/openapi/v1.yaml` 是 ANI Core 对外 REST API 的唯一真实来源；所有新 Core API 必须先改 API 契约，再写实现、测试和 SDK。
+2. Core API `servers[0].url` 必须为 `https://{host}/api/v1`；Services API `servers[0].url` 必须为 `https://{host}/api/v1/svc`。
+3. Proto 是内部 gRPC 实现细节；当 Proto 与 REST schema 描述同一资源冲突时，以 API 契约为准。
+4. Core API v1 允许新增可选 request 字段、response 字段、端点和枚举值；删除字段、改字段类型、删除端点、修改 HTTP 方法、修改错误语义均属于破坏性变更。
+5. 所有 POST 创建和有副作用的 PUT/PATCH 必须支持 `idempotency_key`；客户端重试必须复用同一个 key。
+6. Core SDK 来源是 `repo/api/openapi/v1.yaml`；Services SDK 来源是 `repo/api/openapi/services/v1.yaml`。SDK 不得包含对方层资源类型。
+7. Core Mock Server 本地默认地址是 `http://127.0.0.1:4010/api/v1`，只覆盖 Core API 契约，不提供 Services 业务 mock。
+8. Sprint 4 的 SDK helper、Mock Server、静态 API 文档和兼容性基线细节不在本文展开；以 `repo/CURRENT-SPRINT.md`、`repo/development-records/README.md` 和对应校验脚本为准。
 
 ---
 
-## 7. 组件边界强制规则
+## 5. 组件边界强制规则
 
-1. `pkg/ports/` 中的 port 指“产品能力抽象/接口边界”，不是 TCP/IP 端口；port 表达 ANI 需要什么能力，adapter 表达默认组件如何实现该能力。
+1. `pkg/ports/` 中的 port 指产品能力抽象/接口边界，不是 TCP/IP 端口。
 2. 只要某组件承载 ANI 产品能力、会被 Core service / Services / API handler 依赖，或存在合理替换/多实现可能，就必须经过 `pkg/ports/` 和 `pkg/adapters/`。
-3. 业务服务不得直接依赖 MinIO、Milvus、NATS JetStream、Redis、Harbor、CloudNativePG 等组件 SDK；这些组件属于 `port_required` 或 `adapter_with_extensions`。
-4. Kubernetes API 属于 `bounded_direct`：允许在 `pkg/adapters/runtime/kubernetes_*`、`pkg/adapters/runtime/kubeovn_*`、controller/reconciler、preflight 或明确登记的 bounded module 中原生使用 Kubernetes/client-go/controller-runtime/CRD API；禁止在 Gateway handler、Core domain service、ANI Services 业务服务中直接使用 K8s SDK 或拼装 provider 对象。
-5. `ports` 不封装完整 Kubernetes SDK；`ports` 只表达 ANI 产品意图，例如 `WorkloadRuntime`、`WorkloadProviderApply`、`NetworkProviderRenderer`。K8s 版本差异、feature gate、server-side apply、watch/list 等原生最佳实践必须留在 adapter/controller 边界内处理。
-6. VM、Container、GPU Container、Sandbox、Batch Job、Notebook、K8s Cluster、BM、DPU 都必须先经过 `WorkloadRuntime` 能力抽象。
-7. 异构 GPU 发现、分类和调度必须经过 `GPUInventory` 能力抽象。
-8. `make test` 会执行或应覆盖架构边界检查；新增直接组件 SDK 导入必须有显式 allowlist、`coupling_level` 和迁移/保留理由。
+3. 业务服务不得直接依赖 MinIO、Milvus、NATS JetStream、Redis、Harbor、CloudNativePG 等组件 SDK；直接导入必须有 allowlist、`coupling_level` 和保留理由。
+4. Kubernetes API 属于 `bounded_direct`：允许在 adapter/controller/preflight 等边界内原生使用；禁止在 Gateway handler、Core domain service、ANI Services 业务服务中直接使用 K8s SDK 或拼装 provider 对象。
+5. `ports` 不封装完整 Kubernetes SDK；`ports` 只表达 ANI 产品意图，例如 `WorkloadRuntime`、`WorkloadProviderApply`、`NetworkProviderRenderer`。
+6. VM、Container、GPU Container、Sandbox、Batch Job、Notebook、K8s Cluster、BM、DPU 都必须先经过 `WorkloadRuntime` 能力抽象；异构 GPU 发现、分类和调度必须经过 `GPUInventory`。
 
 ---
 
-## 8. 开发阶段命名规则
+## 6. 开发、验证、文档闭环
 
-1. `ANI-06` 中的模块编号是产品开发计划编号。
-2. 代码生成批次使用可回溯命名，例如 `M2.1-TASK-A`、`M1-INSTANCE-U`。
-3. 禁止继续使用 `Stage 3A/3B/3C` 这类容易误解为模块编号的名称；历史出现时必须注明旧名。
-4. 当前整体进度在 `ANI-06-开发计划.md` Section 零。
-5. 当前 Sprint 任务在 `repo/CURRENT-SPRINT.md`。
-6. 已完成批次归档在 `repo/development-records/README.md`。
-
----
-
-## 9. 完工闭环规约
-
-### 批次完成时
-
-触发条件：`make test`、当前批次验收命令和必要架构检查通过。
-
-必须更新：
-
-```text
-1. repo/development-records/{批次名}.md
-2. repo/development-records/README.md
-3. repo/CURRENT-SPRINT.md
-4. ANI-06-开发计划.md Section 零
-```
-
-批次记录文件使用 `repo/development-records/TEMPLATE.md`。
-
-### Sprint 完成时
-
-必须更新：
-
-```text
-1. ANI-06-开发计划.md Section 零：当前 Sprint → 已完成，下一 Sprint → 当前
-2. repo/CURRENT-SPRINT.md：整体切换到下一 Sprint
-3. ANI-DOCS-INDEX.md：当前状态和门禁如有变化则同步
-```
+1. 代码生成批次使用可回溯命名，例如 `M2.1-TASK-A`、`M1-INSTANCE-U`。历史 `Stage 3A/3B/3C` 仅可作为旧名说明。
+2. 每个批次完成时，必须通过当前批次验收命令、`make test`、`make validate-architecture`、`git diff --check`。
+3. 每个批次完成时，必须更新 `repo/development-records/{批次名}.md`、`repo/development-records/README.md`、`repo/CURRENT-SPRINT.md`、`ANI-06-开发计划.md`。
+4. Sprint 切换时，必须同步 `ANI-06-开发计划.md`、`repo/CURRENT-SPRINT.md`、`ANI-DOCS-INDEX.md`。
+5. 当前 Sprint 4 尚未提交 GitHub 前，不得把当前执行入口切换到 Sprint 5。
 
 ---
 
-## 10. 提交前验证
+## 7. 提交与版本
 
-至少执行：
+提交前至少执行：
 
 ```bash
 cd repo
@@ -232,21 +111,11 @@ make validate-architecture
 git diff --check
 ```
 
-发布或预发布还必须遵守 `ANI-12-版本管理策略.md` 的发布门禁。
+发布或预发布必须遵守 `ANI-12-版本管理策略.md`。ANI 使用 SemVer，首个正式版本是 `v1.0.0`，目标日期 `2026-09-30`；当前不得标记为 `v1.0.0` 或 RC。
 
 ---
 
-## 11. 版本管理
-
-1. ANI 使用 SemVer：`vMAJOR.MINOR.PATCH[-pre.N]`。
-2. 首个正式版本是 `v1.0.0`，目标日期 `2026-09-30`。
-3. 当前仍处于 `v0.x` 开发期，不得标记为 `v1.0.0` 或 RC。
-4. 产品阶段、开发模块、代码生成批次与版本号独立。
-5. API、Proto、DB、CRD、Helm、认证/安全模型的破坏性变更必须按 `ANI-12` 判断版本影响。
-
----
-
-## 12. Karpathy 四条开发原则
+## 8. Karpathy 四条开发原则
 
 ### 原则一：先思考，再编码
 **不要假设。不要掩饰困惑。要揭示取舍。**

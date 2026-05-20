@@ -10,10 +10,11 @@ import (
 func TestVectorStoreAPIDevProfileCreateSearchAndDelete(t *testing.T) {
 	api := newVectorStoreAPI()
 	store, err := api.service.CreateVectorStore(context.Background(), ports.VectorStoreCreateRequest{
-		TenantID:  "tenant-a",
-		Name:      "kb-main",
-		Dimension: 3,
-		Metric:    "cosine",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "api-vector-a",
+		Name:           "kb-main",
+		Dimension:      3,
+		Metric:         "cosine",
 	})
 	if err != nil {
 		t.Fatalf("CreateVectorStore error = %v", err)
@@ -50,9 +51,10 @@ func TestVectorStoreAPIDevProfileCreateSearchAndDelete(t *testing.T) {
 func TestVectorStoreAPIServiceKeepsTenantIsolation(t *testing.T) {
 	api := newVectorStoreAPI()
 	store, err := api.service.CreateVectorStore(context.Background(), ports.VectorStoreCreateRequest{
-		TenantID:  "tenant-a",
-		Name:      "tenant-a-store",
-		Dimension: 3,
+		TenantID:       "tenant-a",
+		IdempotencyKey: "api-vector-b",
+		Name:           "tenant-a-store",
+		Dimension:      3,
 	})
 	if err != nil {
 		t.Fatalf("CreateVectorStore error = %v", err)

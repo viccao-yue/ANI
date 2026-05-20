@@ -17,21 +17,24 @@ type networkAPI struct {
 }
 
 type networkCreateVPCRequest struct {
-	Name string `json:"name"`
-	CIDR string `json:"cidr"`
+	IdempotencyKey string `json:"idempotency_key"`
+	Name           string `json:"name"`
+	CIDR           string `json:"cidr"`
 }
 
 type networkCreateSubnetRequest struct {
-	VPCID   string `json:"vpc_id"`
-	Name    string `json:"name"`
-	CIDR    string `json:"cidr"`
-	Gateway string `json:"gateway"`
+	IdempotencyKey string `json:"idempotency_key"`
+	VPCID          string `json:"vpc_id"`
+	Name           string `json:"name"`
+	CIDR           string `json:"cidr"`
+	Gateway        string `json:"gateway"`
 }
 
 type networkCreateSecurityGroupRequest struct {
-	Name        string                     `json:"name"`
-	Description string                     `json:"description"`
-	Rules       []networkSecurityGroupRule `json:"rules"`
+	IdempotencyKey string                     `json:"idempotency_key"`
+	Name           string                     `json:"name"`
+	Description    string                     `json:"description"`
+	Rules          []networkSecurityGroupRule `json:"rules"`
 }
 
 type networkSecurityGroupRule struct {
@@ -43,11 +46,12 @@ type networkSecurityGroupRule struct {
 }
 
 type networkCreateLoadBalancerRequest struct {
-	Name      string                    `json:"name"`
-	VPCID     string                    `json:"vpc_id"`
-	SubnetID  string                    `json:"subnet_id"`
-	Scheme    string                    `json:"scheme"`
-	Listeners []networkLBListenerRecord `json:"listeners"`
+	IdempotencyKey string                    `json:"idempotency_key"`
+	Name           string                    `json:"name"`
+	VPCID          string                    `json:"vpc_id"`
+	SubnetID       string                    `json:"subnet_id"`
+	Scheme         string                    `json:"scheme"`
+	Listeners      []networkLBListenerRecord `json:"listeners"`
 }
 
 type networkLBListenerRecord struct {
@@ -145,9 +149,10 @@ func (api *networkAPI) createVPC(ctx context.Context, c *app.RequestContext) {
 		return
 	}
 	record, err := api.service.CreateVPC(ctx, ports.NetworkVPCCreateRequest{
-		TenantID: demoTenantID(c),
-		Name:     req.Name,
-		CIDR:     req.CIDR,
+		TenantID:       demoTenantID(c),
+		IdempotencyKey: req.IdempotencyKey,
+		Name:           req.Name,
+		CIDR:           req.CIDR,
 	})
 	if err != nil {
 		writeNetworkError(c, err)
@@ -166,7 +171,7 @@ func (api *networkAPI) listVPCs(ctx context.Context, c *app.RequestContext) {
 	for _, record := range records {
 		items = append(items, networkVPCFromRecord(record))
 	}
-	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items)})
+	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items), "next_cursor": nil})
 }
 
 func (api *networkAPI) getVPC(ctx context.Context, c *app.RequestContext) {
@@ -194,11 +199,12 @@ func (api *networkAPI) createSubnet(ctx context.Context, c *app.RequestContext) 
 		return
 	}
 	record, err := api.service.CreateSubnet(ctx, ports.NetworkSubnetCreateRequest{
-		TenantID: demoTenantID(c),
-		VPCID:    req.VPCID,
-		Name:     req.Name,
-		CIDR:     req.CIDR,
-		Gateway:  req.Gateway,
+		TenantID:       demoTenantID(c),
+		IdempotencyKey: req.IdempotencyKey,
+		VPCID:          req.VPCID,
+		Name:           req.Name,
+		CIDR:           req.CIDR,
+		Gateway:        req.Gateway,
 	})
 	if err != nil {
 		writeNetworkError(c, err)
@@ -217,7 +223,7 @@ func (api *networkAPI) listSubnets(ctx context.Context, c *app.RequestContext) {
 	for _, record := range records {
 		items = append(items, networkSubnetFromRecord(record))
 	}
-	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items)})
+	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items), "next_cursor": nil})
 }
 
 func (api *networkAPI) getSubnet(ctx context.Context, c *app.RequestContext) {
@@ -245,10 +251,11 @@ func (api *networkAPI) createSecurityGroup(ctx context.Context, c *app.RequestCo
 		return
 	}
 	record, err := api.service.CreateSecurityGroup(ctx, ports.NetworkSecurityGroupCreateRequest{
-		TenantID:    demoTenantID(c),
-		Name:        req.Name,
-		Description: req.Description,
-		Rules:       networkRulesToPorts(req.Rules),
+		TenantID:       demoTenantID(c),
+		IdempotencyKey: req.IdempotencyKey,
+		Name:           req.Name,
+		Description:    req.Description,
+		Rules:          networkRulesToPorts(req.Rules),
 	})
 	if err != nil {
 		writeNetworkError(c, err)
@@ -267,7 +274,7 @@ func (api *networkAPI) listSecurityGroups(ctx context.Context, c *app.RequestCon
 	for _, record := range records {
 		items = append(items, networkSecurityGroupFromRecord(record))
 	}
-	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items)})
+	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items), "next_cursor": nil})
 }
 
 func (api *networkAPI) getSecurityGroup(ctx context.Context, c *app.RequestContext) {
@@ -295,12 +302,13 @@ func (api *networkAPI) createLoadBalancer(ctx context.Context, c *app.RequestCon
 		return
 	}
 	record, err := api.service.CreateLoadBalancer(ctx, ports.NetworkLoadBalancerCreateRequest{
-		TenantID:  demoTenantID(c),
-		Name:      req.Name,
-		VPCID:     req.VPCID,
-		SubnetID:  req.SubnetID,
-		Scheme:    req.Scheme,
-		Listeners: networkListenersToPorts(req.Listeners),
+		TenantID:       demoTenantID(c),
+		IdempotencyKey: req.IdempotencyKey,
+		Name:           req.Name,
+		VPCID:          req.VPCID,
+		SubnetID:       req.SubnetID,
+		Scheme:         req.Scheme,
+		Listeners:      networkListenersToPorts(req.Listeners),
 	})
 	if err != nil {
 		writeNetworkError(c, err)
@@ -319,7 +327,7 @@ func (api *networkAPI) listLoadBalancers(ctx context.Context, c *app.RequestCont
 	for _, record := range records {
 		items = append(items, networkLoadBalancerFromRecord(record))
 	}
-	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items)})
+	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items), "next_cursor": nil})
 }
 
 func (api *networkAPI) getLoadBalancer(ctx context.Context, c *app.RequestContext) {

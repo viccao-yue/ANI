@@ -11,6 +11,33 @@ func TestSDKAlphaSmoke(t *testing.T) {
 	if len(Schemas) == 0 {
 		t.Fatalf("expected generated schemas")
 	}
+	key, err := NewIdempotencyKey("test")
+	if err != nil {
+		t.Fatalf("NewIdempotencyKey() error = %v", err)
+	}
+	body, err := WithIdempotencyKey(map[string]any{"name": "demo"}, key)
+	if err != nil {
+		t.Fatalf("WithIdempotencyKey() error = %v", err)
+	}
+	if body["idempotency_key"] != key {
+		t.Fatalf("idempotency key helper did not set key")
+	}
+	params := CursorParams(20, "next")
+	if params["limit"] != "20" || params["cursor"] != "next" {
+		t.Fatalf("cursor helper returned %#v", params)
+	}
+	apiErr := NewAPIError("BAD_REQUEST", "invalid request", "req_test", nil)
+	if apiErr.Code == "" || !IsAPIErrorCode("BAD_REQUEST") {
+		t.Fatalf("invalid API error helper")
+	}
+	if apiErr.Error() == "" {
+		t.Fatalf("APIError must implement error")
+	}
+	if _, ok := any(client).(interface {
+		Request(string, string, RequestOptions) (any, error)
+	}); !ok {
+		t.Fatalf("client must expose Request")
+	}
 	if len(Operations) == 0 {
 		t.Fatalf("expected generated operations")
 	}

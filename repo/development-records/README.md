@@ -6,9 +6,9 @@
 > - **当前冲刺任务** → `repo/CURRENT-SPRINT.md`（每冲刺更新）
 > - **已完成批次详情** → 本文件（每批次完成后追加）
 
-> 当前执行已切换到 **Sprint 4**。本文只做已完成批次归档，不作为当前任务清单使用。
+> 当前执行处于 **Sprint 4 收尾**：开发与验收已完成，待提交 GitHub。本文只做已完成批次归档，不作为当前任务清单使用。
 > 2026-05-20 提交前闭环审查：Sprint 2 代码实现、OpenAPI 契约、冻结矩阵、校验脚本和批次记录已对齐；Sprint 3 当前优先项已切换为 `CORE-DEV-PROFILE-A`（原 `MOCK-DEV-A`，已收窄为 Core dev/local profile，不包含 Services 业务 mock）。
-> 2026-05-20 Sprint 3 闭环门禁已通过，当前执行切换到 **Sprint 4 / SPEC-SPLIT-A**。
+> 2026-05-21 Sprint 3 闭环门禁已通过，当前执行切换到 **Sprint 4**；`SPEC-SPLIT-A` 已完成，`SPEC-CORE-BETA` 已完成 Beta 准备矩阵、Core API v1 兼容性基线、SDK/Mock/API 文档加固、四语言 SDK-Mock 联动烟测和提交前审查。当前状态：开发与验收完成，待提交 GitHub；提交完成后再切换下一 Sprint。
 
 ---
 
@@ -19,6 +19,19 @@
 | 批次 | 内容摘要 | 文件 |
 |---|---|---|
 | SPEC-SPLIT-A | Core/Services API 分层收口：Services 业务路径迁移到 Services API，Gateway Services stub 改挂 `/api/v1/svc`，SDK metadata 自然分层 | spec-split-a-core-services-api-boundary.md |
+| SPEC-CORE-BETA-A | Core API Beta 准备矩阵：P0 path/schema、分页、幂等、状态机、dev_profile、RBAC scope 和 Core/Services 边界守卫 | spec-core-beta-a-readiness-matrix.md |
+| SPEC-COMPAT-A | Core API v1 兼容性基线：保护 path/method/operationId/参数/响应/schema 字段，允许新增可选能力但阻止破坏性变更 | spec-compat-a-core-api-v1-baseline.md |
+| SDK-BETA-A | 四语言 SDK 幂等 helper：生成 idempotency key、注入请求体、metadata 标出 Core 幂等操作 | sdk-beta-a-idempotency-helper.md |
+| SDK-BETA-B | 四语言 SDK cursor 分页 helper：构造 limit/cursor 参数、metadata 标出 Core 分页操作 | sdk-beta-b-cursor-pagination-helper.md |
+| SDK-BETA-C | 四语言 SDK 统一 API error helper：错误对象、错误码清单、错误码判断 | sdk-beta-c-api-error-helper.md |
+| SDK-BETA-D | 四语言 SDK basic example：client 初始化、幂等、cursor 分页和 API error helper 组合用法 | sdk-beta-d-basic-examples.md |
+| SDK-MOCK-SMOKE-A | Core Python SDK 调用 Mock Server 烟测：标准库 HTTP request 能力、分页响应和标准错误响应校验 | sdk-mock-smoke-a-python-sdk-mock-server.md |
+| SDK-MOCK-SMOKE-B | Core TypeScript SDK 调用 Mock Server 烟测：fetch request 能力、分页响应和标准错误响应校验 | sdk-mock-smoke-b-typescript-sdk-mock-server.md |
+| SDK-MOCK-SMOKE-C | Core Go SDK 调用 Mock Server 烟测：net/http Request 能力、分页响应和标准错误响应校验 | sdk-mock-smoke-c-go-sdk-mock-server.md |
+| SDK-MOCK-SMOKE-D | Core Java SDK 调用 Mock Server 烟测：HttpClient request 能力、分页响应和标准错误响应校验 | sdk-mock-smoke-d-java-sdk-mock-server.md |
+| MOCK-A | Core Mock Server：由 `api/openapi/v1.yaml` 驱动，覆盖 Core API 成功响应和统一错误结构 | mock-a-core-openapi-mock-server.md |
+| DOC-API-A | 静态 API 文档生成：Core/Services API 契约生成 docs/api，并校验 operation/schema 覆盖 | doc-api-a-static-api-docs.md |
+| SPRINT4-CLOSURE-A | Sprint 4 关联性闭环门禁：统一校验 API/SDK/Mock/Docs/Records 与 Makefile 入口 | sprint4-closure-a-contract.md |
 
 ### Sprint 3 Network / Storage / SDK（2026-05）
 

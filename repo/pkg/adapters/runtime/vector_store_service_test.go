@@ -11,16 +11,30 @@ func TestLocalVectorStoreServiceDevProfile(t *testing.T) {
 	service := NewLocalVectorStoreService()
 
 	store, err := service.CreateVectorStore(context.Background(), ports.VectorStoreCreateRequest{
-		TenantID:  "tenant-a",
-		Name:      "kb-main",
-		Dimension: 3,
-		Metric:    "cosine",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "vector-store-a",
+		Name:           "kb-main",
+		Dimension:      3,
+		Metric:         "cosine",
 	})
 	if err != nil {
 		t.Fatalf("CreateVectorStore() error = %v", err)
 	}
 	if store.StoreID == "" || store.State != ports.VectorStoreReady || store.Metric != "cosine" {
 		t.Fatalf("store = %#v, want ready cosine store", store)
+	}
+	replay, err := service.CreateVectorStore(context.Background(), ports.VectorStoreCreateRequest{
+		TenantID:       "tenant-a",
+		IdempotencyKey: "vector-store-a",
+		Name:           "kb-main-retry",
+		Dimension:      99,
+		Metric:         "l2",
+	})
+	if err != nil {
+		t.Fatalf("CreateVectorStore replay error = %v", err)
+	}
+	if replay.StoreID != store.StoreID || replay.Dimension != store.Dimension {
+		t.Fatalf("replay store = %#v, want original %#v", replay, store)
 	}
 	if _, err := service.GetVectorStore(context.Background(), ports.VectorStoreResourceGetRequest{TenantID: "tenant-b", ResourceID: store.StoreID}); err == nil {
 		t.Fatalf("GetVectorStore from another tenant succeeded, want isolation error")
@@ -49,9 +63,10 @@ func TestLocalVectorStoreServiceDevProfile(t *testing.T) {
 func TestLocalVectorStoreServiceSearchValidatesDimension(t *testing.T) {
 	service := NewLocalVectorStoreService()
 	store, err := service.CreateVectorStore(context.Background(), ports.VectorStoreCreateRequest{
-		TenantID:  "tenant-a",
-		Name:      "kb-main",
-		Dimension: 3,
+		TenantID:       "tenant-a",
+		IdempotencyKey: "vector-store-b",
+		Name:           "kb-main",
+		Dimension:      3,
 	})
 	if err != nil {
 		t.Fatalf("CreateVectorStore() error = %v", err)

@@ -10,6 +10,24 @@ public final class Smoke {
         if (ApiClient.SCHEMAS.isEmpty()) {
             throw new IllegalStateException("expected generated schemas");
         }
+        if (!ApiClient.newIdempotencyKey("test").startsWith("test_")) {
+            throw new IllegalStateException("invalid idempotency key helper");
+        }
+        if (!"fixed".equals(ApiClient.withIdempotencyKey(null, "fixed").get("idempotency_key"))) {
+            throw new IllegalStateException("invalid idempotency payload helper");
+        }
+        if (!"20".equals(ApiClient.cursorParams(20, "next").get("limit"))) {
+            throw new IllegalStateException("invalid cursor pagination helper");
+        }
+        ApiClient.APIError error = ApiClient.apiError("BAD_REQUEST", "invalid request", "req_test", null);
+        if (!"BAD_REQUEST".equals(error.code()) || !ApiClient.isAPIErrorCode("BAD_REQUEST")) {
+            throw new IllegalStateException("invalid API error helper");
+        }
+        try {
+            client.request("GET", "/healthz", new ApiClient.RequestOptions(null, null, null));
+        } catch (java.io.IOException | InterruptedException | ApiClient.APIException expectedWithoutServer) {
+            // Source smoke only checks that the request surface is callable without external dependencies.
+        }
         if (ApiClient.OPERATIONS.isEmpty()) {
             throw new IllegalStateException("expected generated operations");
         }

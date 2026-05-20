@@ -10,15 +10,28 @@ import (
 func TestLocalNetworkServiceVPCDevProfile(t *testing.T) {
 	service := NewLocalNetworkService()
 	vpc, err := service.CreateVPC(context.Background(), ports.NetworkVPCCreateRequest{
-		TenantID: "tenant-a",
-		Name:     "tenant-a-vpc",
-		CIDR:     "10.20.0.0/16",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "network-vpc-a",
+		Name:           "tenant-a-vpc",
+		CIDR:           "10.20.0.0/16",
 	})
 	if err != nil {
 		t.Fatalf("CreateVPC error = %v", err)
 	}
 	if vpc.VPCID == "" || vpc.State != ports.NetworkResourceAvailable || vpc.CIDR != "10.20.0.0/16" {
 		t.Fatalf("vpc = %+v, want available local VPC", vpc)
+	}
+	replay, err := service.CreateVPC(context.Background(), ports.NetworkVPCCreateRequest{
+		TenantID:       "tenant-a",
+		IdempotencyKey: "network-vpc-a",
+		Name:           "tenant-a-vpc-retry",
+		CIDR:           "10.99.0.0/16",
+	})
+	if err != nil {
+		t.Fatalf("CreateVPC replay error = %v", err)
+	}
+	if replay.VPCID != vpc.VPCID || replay.CIDR != vpc.CIDR {
+		t.Fatalf("replay vpc = %+v, want original %+v", replay, vpc)
 	}
 	items, err := service.ListVPCs(context.Background(), ports.NetworkResourceListRequest{TenantID: "tenant-a"})
 	if err != nil {
@@ -38,16 +51,17 @@ func TestLocalNetworkServiceVPCDevProfile(t *testing.T) {
 
 func TestLocalNetworkServiceSubnetRequiresTenantVPC(t *testing.T) {
 	service := NewLocalNetworkService()
-	vpc, err := service.CreateVPC(context.Background(), ports.NetworkVPCCreateRequest{TenantID: "tenant-a", Name: "vpc-a"})
+	vpc, err := service.CreateVPC(context.Background(), ports.NetworkVPCCreateRequest{TenantID: "tenant-a", IdempotencyKey: "network-vpc-b", Name: "vpc-a"})
 	if err != nil {
 		t.Fatalf("CreateVPC error = %v", err)
 	}
 	subnet, err := service.CreateSubnet(context.Background(), ports.NetworkSubnetCreateRequest{
-		TenantID: "tenant-a",
-		VPCID:    vpc.VPCID,
-		Name:     "subnet-a",
-		CIDR:     "10.20.1.0/24",
-		Gateway:  "10.20.1.1",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "network-subnet-a",
+		VPCID:          vpc.VPCID,
+		Name:           "subnet-a",
+		CIDR:           "10.20.1.0/24",
+		Gateway:        "10.20.1.1",
 	})
 	if err != nil {
 		t.Fatalf("CreateSubnet error = %v", err)
@@ -56,9 +70,10 @@ func TestLocalNetworkServiceSubnetRequiresTenantVPC(t *testing.T) {
 		t.Fatalf("subnet = %+v, want available subnet under vpc", subnet)
 	}
 	if _, err := service.CreateSubnet(context.Background(), ports.NetworkSubnetCreateRequest{
-		TenantID: "tenant-b",
-		VPCID:    vpc.VPCID,
-		Name:     "bad-subnet",
+		TenantID:       "tenant-b",
+		IdempotencyKey: "network-subnet-bad",
+		VPCID:          vpc.VPCID,
+		Name:           "bad-subnet",
 	}); err == nil {
 		t.Fatalf("CreateSubnet with another tenant VPC succeeded, want error")
 	}
@@ -66,13 +81,14 @@ func TestLocalNetworkServiceSubnetRequiresTenantVPC(t *testing.T) {
 
 func TestLocalNetworkServiceSecurityGroupAndLoadBalancer(t *testing.T) {
 	service := NewLocalNetworkService()
-	vpc, err := service.CreateVPC(context.Background(), ports.NetworkVPCCreateRequest{TenantID: "tenant-a", Name: "vpc-a"})
+	vpc, err := service.CreateVPC(context.Background(), ports.NetworkVPCCreateRequest{TenantID: "tenant-a", IdempotencyKey: "network-vpc-c", Name: "vpc-a"})
 	if err != nil {
 		t.Fatalf("CreateVPC error = %v", err)
 	}
 	sg, err := service.CreateSecurityGroup(context.Background(), ports.NetworkSecurityGroupCreateRequest{
-		TenantID: "tenant-a",
-		Name:     "web-sg",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "network-sg-a",
+		Name:           "web-sg",
 		Rules: []ports.NetworkSecurityGroupRule{
 			{Direction: "ingress", Protocol: "tcp", PortRange: "443", CIDR: "0.0.0.0/0", Action: "allow"},
 		},
@@ -84,10 +100,11 @@ func TestLocalNetworkServiceSecurityGroupAndLoadBalancer(t *testing.T) {
 		t.Fatalf("security group = %+v, want one rule", sg)
 	}
 	lb, err := service.CreateLoadBalancer(context.Background(), ports.NetworkLoadBalancerCreateRequest{
-		TenantID: "tenant-a",
-		Name:     "web-lb",
-		VPCID:    vpc.VPCID,
-		Scheme:   "public",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "network-lb-a",
+		Name:           "web-lb",
+		VPCID:          vpc.VPCID,
+		Scheme:         "public",
 		Listeners: []ports.NetworkLoadBalancerListener{
 			{Protocol: "http", Port: 80, TargetPort: 8080},
 		},

@@ -28,10 +28,11 @@ type VectorStoreRecord struct {
 }
 
 type VectorStoreCreateRequest struct {
-	TenantID  string
-	Name      string
-	Dimension int
-	Metric    string
+	TenantID       string
+	IdempotencyKey string
+	Name           string
+	Dimension      int
+	Metric         string
 }
 
 type VectorStoreResourceGetRequest struct {

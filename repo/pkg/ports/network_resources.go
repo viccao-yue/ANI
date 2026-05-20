@@ -81,33 +81,37 @@ type NetworkLoadBalancerRecord struct {
 }
 
 type NetworkVPCCreateRequest struct {
-	TenantID string
-	Name     string
-	CIDR     string
+	TenantID       string
+	IdempotencyKey string
+	Name           string
+	CIDR           string
 }
 
 type NetworkSubnetCreateRequest struct {
-	TenantID string
-	VPCID    string
-	Name     string
-	CIDR     string
-	Gateway  string
+	TenantID       string
+	IdempotencyKey string
+	VPCID          string
+	Name           string
+	CIDR           string
+	Gateway        string
 }
 
 type NetworkSecurityGroupCreateRequest struct {
-	TenantID    string
-	Name        string
-	Description string
-	Rules       []NetworkSecurityGroupRule
+	TenantID       string
+	IdempotencyKey string
+	Name           string
+	Description    string
+	Rules          []NetworkSecurityGroupRule
 }
 
 type NetworkLoadBalancerCreateRequest struct {
-	TenantID  string
-	Name      string
-	VPCID     string
-	SubnetID  string
-	Scheme    string
-	Listeners []NetworkLoadBalancerListener
+	TenantID       string
+	IdempotencyKey string
+	Name           string
+	VPCID          string
+	SubnetID       string
+	Scheme         string
+	Listeners      []NetworkLoadBalancerListener
 }
 
 type NetworkResourceGetRequest struct {

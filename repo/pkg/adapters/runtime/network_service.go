@@ -13,13 +13,17 @@ import (
 )
 
 type LocalNetworkService struct {
-	mu            sync.RWMutex
-	now           func() time.Time
-	store         ports.NetworkResourceStore
-	vpcs          map[string]ports.NetworkVPCRecord
-	subnets       map[string]ports.NetworkSubnetRecord
-	securityGroup map[string]ports.NetworkSecurityGroupRecord
-	loadBalancers map[string]ports.NetworkLoadBalancerRecord
+	mu                sync.RWMutex
+	now               func() time.Time
+	store             ports.NetworkResourceStore
+	vpcs              map[string]ports.NetworkVPCRecord
+	subnets           map[string]ports.NetworkSubnetRecord
+	securityGroup     map[string]ports.NetworkSecurityGroupRecord
+	loadBalancers     map[string]ports.NetworkLoadBalancerRecord
+	vpcIdempotency    map[string]string
+	subnetIdempotency map[string]string
+	securityGroupIdem map[string]string
+	loadBalancerIdem  map[string]string
 }
 
 type NetworkServiceOption func(*LocalNetworkService)
@@ -40,11 +44,15 @@ func WithNetworkResourceStore(store ports.NetworkResourceStore) NetworkServiceOp
 
 func NewLocalNetworkService(options ...NetworkServiceOption) *LocalNetworkService {
 	service := &LocalNetworkService{
-		now:           func() time.Time { return time.Now().UTC() },
-		vpcs:          map[string]ports.NetworkVPCRecord{},
-		subnets:       map[string]ports.NetworkSubnetRecord{},
-		securityGroup: map[string]ports.NetworkSecurityGroupRecord{},
-		loadBalancers: map[string]ports.NetworkLoadBalancerRecord{},
+		now:               func() time.Time { return time.Now().UTC() },
+		vpcs:              map[string]ports.NetworkVPCRecord{},
+		subnets:           map[string]ports.NetworkSubnetRecord{},
+		securityGroup:     map[string]ports.NetworkSecurityGroupRecord{},
+		loadBalancers:     map[string]ports.NetworkLoadBalancerRecord{},
+		vpcIdempotency:    map[string]string{},
+		subnetIdempotency: map[string]string{},
+		securityGroupIdem: map[string]string{},
+		loadBalancerIdem:  map[string]string{},
 	}
 	for _, option := range options {
 		option(service)
@@ -55,6 +63,17 @@ func NewLocalNetworkService(options ...NetworkServiceOption) *LocalNetworkServic
 func (s *LocalNetworkService) CreateVPC(ctx context.Context, request ports.NetworkVPCCreateRequest) (ports.NetworkVPCRecord, error) {
 	if err := requireNetworkTenantAndName(request.TenantID, request.Name); err != nil {
 		return ports.NetworkVPCRecord{}, err
+	}
+	idemKey, err := requireIdempotencyKey(request.TenantID, request.IdempotencyKey)
+	if err != nil {
+		return ports.NetworkVPCRecord{}, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if id, ok := s.vpcIdempotency[idemKey]; ok {
+		if record, exists := s.vpcs[id]; exists {
+			return record, nil
+		}
 	}
 	now := s.now().UTC()
 	record := ports.NetworkVPCRecord{
@@ -67,9 +86,8 @@ func (s *LocalNetworkService) CreateVPC(ctx context.Context, request ports.Netwo
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.vpcs[record.VPCID] = record
+	s.vpcIdempotency[idemKey] = record.VPCID
 	if err := s.upsertVPC(ctx, record); err != nil {
 		return ports.NetworkVPCRecord{}, err
 	}
@@ -121,8 +139,19 @@ func (s *LocalNetworkService) CreateSubnet(ctx context.Context, request ports.Ne
 	if err := requireNetworkTenantAndName(request.TenantID, request.Name); err != nil {
 		return ports.NetworkSubnetRecord{}, err
 	}
+	idemKey, err := requireIdempotencyKey(request.TenantID, request.IdempotencyKey)
+	if err != nil {
+		return ports.NetworkSubnetRecord{}, err
+	}
 	if strings.TrimSpace(request.VPCID) == "" {
 		return ports.NetworkSubnetRecord{}, fmt.Errorf("%w: vpc_id is required", ports.ErrInvalid)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if id, ok := s.subnetIdempotency[idemKey]; ok {
+		if record, exists := s.subnets[id]; exists {
+			return record, nil
+		}
 	}
 	now := s.now().UTC()
 	record := ports.NetworkSubnetRecord{
@@ -137,13 +166,12 @@ func (s *LocalNetworkService) CreateSubnet(ctx context.Context, request ports.Ne
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	vpc, ok := s.vpcs[record.VPCID]
 	if !ok || vpc.TenantID != request.TenantID || vpc.State == ports.NetworkResourceDeleted {
 		return ports.NetworkSubnetRecord{}, fmt.Errorf("%w: vpc not found", ports.ErrNotFound)
 	}
 	s.subnets[record.SubnetID] = record
+	s.subnetIdempotency[idemKey] = record.SubnetID
 	if err := s.upsertSubnet(ctx, record); err != nil {
 		return ports.NetworkSubnetRecord{}, err
 	}
@@ -194,6 +222,17 @@ func (s *LocalNetworkService) CreateSecurityGroup(ctx context.Context, request p
 	if err := requireNetworkTenantAndName(request.TenantID, request.Name); err != nil {
 		return ports.NetworkSecurityGroupRecord{}, err
 	}
+	idemKey, err := requireIdempotencyKey(request.TenantID, request.IdempotencyKey)
+	if err != nil {
+		return ports.NetworkSecurityGroupRecord{}, err
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if id, ok := s.securityGroupIdem[idemKey]; ok {
+		if record, exists := s.securityGroup[id]; exists {
+			return record, nil
+		}
+	}
 	now := s.now().UTC()
 	record := ports.NetworkSecurityGroupRecord{
 		TenantID:        request.TenantID,
@@ -206,9 +245,8 @@ func (s *LocalNetworkService) CreateSecurityGroup(ctx context.Context, request p
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.securityGroup[record.SecurityGroupID] = record
+	s.securityGroupIdem[idemKey] = record.SecurityGroupID
 	if err := s.upsertSecurityGroup(ctx, record); err != nil {
 		return ports.NetworkSecurityGroupRecord{}, err
 	}
@@ -259,8 +297,19 @@ func (s *LocalNetworkService) CreateLoadBalancer(ctx context.Context, request po
 	if err := requireNetworkTenantAndName(request.TenantID, request.Name); err != nil {
 		return ports.NetworkLoadBalancerRecord{}, err
 	}
+	idemKey, err := requireIdempotencyKey(request.TenantID, request.IdempotencyKey)
+	if err != nil {
+		return ports.NetworkLoadBalancerRecord{}, err
+	}
 	if strings.TrimSpace(request.VPCID) == "" {
 		return ports.NetworkLoadBalancerRecord{}, fmt.Errorf("%w: vpc_id is required", ports.ErrInvalid)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if id, ok := s.loadBalancerIdem[idemKey]; ok {
+		if record, exists := s.loadBalancers[id]; exists {
+			return record, nil
+		}
 	}
 	now := s.now().UTC()
 	record := ports.NetworkLoadBalancerRecord{
@@ -277,13 +326,12 @@ func (s *LocalNetworkService) CreateLoadBalancer(ctx context.Context, request po
 		CreatedAt:      now,
 		UpdatedAt:      now,
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	vpc, ok := s.vpcs[record.VPCID]
 	if !ok || vpc.TenantID != request.TenantID || vpc.State == ports.NetworkResourceDeleted {
 		return ports.NetworkLoadBalancerRecord{}, fmt.Errorf("%w: vpc not found", ports.ErrNotFound)
 	}
 	s.loadBalancers[record.LoadBalancerID] = record
+	s.loadBalancerIdem[idemKey] = record.LoadBalancerID
 	if err := s.upsertLoadBalancer(ctx, record); err != nil {
 		return ports.NetworkLoadBalancerRecord{}, err
 	}
@@ -375,6 +423,18 @@ func firstNetworkNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func requireIdempotencyKey(tenantID string, key string) (string, error) {
+	tenantID = strings.TrimSpace(tenantID)
+	key = strings.TrimSpace(key)
+	if tenantID == "" {
+		return "", fmt.Errorf("%w: tenant_id is required", ports.ErrInvalid)
+	}
+	if key == "" {
+		return "", fmt.Errorf("%w: idempotency_key is required", ports.ErrInvalid)
+	}
+	return tenantID + "\x00" + key, nil
 }
 
 var _ ports.NetworkService = (*LocalNetworkService)(nil)

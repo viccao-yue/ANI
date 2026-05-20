@@ -13,12 +13,15 @@ import (
 )
 
 type LocalStorageService struct {
-	mu          sync.RWMutex
-	now         func() time.Time
-	store       ports.StorageResourceStore
-	volumes     map[string]ports.StorageVolumeRecord
-	filesystems map[string]ports.StorageFilesystemRecord
-	objects     map[string]ports.StorageObjectRecord
+	mu                sync.RWMutex
+	now               func() time.Time
+	store             ports.StorageResourceStore
+	volumes           map[string]ports.StorageVolumeRecord
+	filesystems       map[string]ports.StorageFilesystemRecord
+	objects           map[string]ports.StorageObjectRecord
+	volumeIdempotency map[string]string
+	fsIdempotency     map[string]string
+	objectIdempotency map[string]string
 }
 
 type StorageServiceOption func(*LocalStorageService)
@@ -39,10 +42,13 @@ func WithStorageResourceStore(store ports.StorageResourceStore) StorageServiceOp
 
 func NewLocalStorageService(options ...StorageServiceOption) *LocalStorageService {
 	service := &LocalStorageService{
-		now:         func() time.Time { return time.Now().UTC() },
-		volumes:     map[string]ports.StorageVolumeRecord{},
-		filesystems: map[string]ports.StorageFilesystemRecord{},
-		objects:     map[string]ports.StorageObjectRecord{},
+		now:               func() time.Time { return time.Now().UTC() },
+		volumes:           map[string]ports.StorageVolumeRecord{},
+		filesystems:       map[string]ports.StorageFilesystemRecord{},
+		objects:           map[string]ports.StorageObjectRecord{},
+		volumeIdempotency: map[string]string{},
+		fsIdempotency:     map[string]string{},
+		objectIdempotency: map[string]string{},
 	}
 	for _, option := range options {
 		option(service)
@@ -54,8 +60,19 @@ func (s *LocalStorageService) CreateVolume(ctx context.Context, request ports.St
 	if err := requireStorageTenantAndName(request.TenantID, request.Name); err != nil {
 		return ports.StorageVolumeRecord{}, err
 	}
+	idemKey, err := requireIdempotencyKey(request.TenantID, request.IdempotencyKey)
+	if err != nil {
+		return ports.StorageVolumeRecord{}, err
+	}
 	if request.SizeGiB <= 0 {
 		return ports.StorageVolumeRecord{}, fmt.Errorf("%w: volume size_gib must be greater than zero", ports.ErrInvalid)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if id, ok := s.volumeIdempotency[idemKey]; ok {
+		if record, exists := s.volumes[id]; exists {
+			return record, nil
+		}
 	}
 	now := s.now().UTC()
 	record := ports.StorageVolumeRecord{
@@ -69,9 +86,8 @@ func (s *LocalStorageService) CreateVolume(ctx context.Context, request ports.St
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.volumes[record.VolumeID] = record
+	s.volumeIdempotency[idemKey] = record.VolumeID
 	if err := s.upsertVolume(ctx, record); err != nil {
 		return ports.StorageVolumeRecord{}, err
 	}
@@ -122,6 +138,10 @@ func (s *LocalStorageService) CreateFilesystem(ctx context.Context, request port
 	if err := requireStorageTenantAndName(request.TenantID, request.Name); err != nil {
 		return ports.StorageFilesystemRecord{}, err
 	}
+	idemKey, err := requireIdempotencyKey(request.TenantID, request.IdempotencyKey)
+	if err != nil {
+		return ports.StorageFilesystemRecord{}, err
+	}
 	if request.SizeGiB <= 0 {
 		return ports.StorageFilesystemRecord{}, fmt.Errorf("%w: filesystem size_gib must be greater than zero", ports.ErrInvalid)
 	}
@@ -131,6 +151,13 @@ func (s *LocalStorageService) CreateFilesystem(ctx context.Context, request port
 	}
 	if protocol != "nfs" && protocol != "cephfs" {
 		return ports.StorageFilesystemRecord{}, fmt.Errorf("%w: unsupported filesystem protocol %q", ports.ErrUnsupported, request.Protocol)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if id, ok := s.fsIdempotency[idemKey]; ok {
+		if record, exists := s.filesystems[id]; exists {
+			return record, nil
+		}
 	}
 	now := s.now().UTC()
 	record := ports.StorageFilesystemRecord{
@@ -145,9 +172,8 @@ func (s *LocalStorageService) CreateFilesystem(ctx context.Context, request port
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.filesystems[record.FilesystemID] = record
+	s.fsIdempotency[idemKey] = record.FilesystemID
 	if err := s.upsertFilesystem(ctx, record); err != nil {
 		return ports.StorageFilesystemRecord{}, err
 	}
@@ -198,11 +224,22 @@ func (s *LocalStorageService) CreateObject(ctx context.Context, request ports.St
 	if strings.TrimSpace(request.TenantID) == "" {
 		return ports.StorageObjectRecord{}, fmt.Errorf("%w: tenant_id is required", ports.ErrInvalid)
 	}
+	idemKey, err := requireIdempotencyKey(request.TenantID, request.IdempotencyKey)
+	if err != nil {
+		return ports.StorageObjectRecord{}, err
+	}
 	if strings.TrimSpace(request.Bucket) == "" || strings.TrimSpace(request.Key) == "" {
 		return ports.StorageObjectRecord{}, fmt.Errorf("%w: bucket and key are required", ports.ErrInvalid)
 	}
 	if request.SizeBytes < 0 {
 		return ports.StorageObjectRecord{}, fmt.Errorf("%w: object size_bytes must not be negative", ports.ErrInvalid)
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if id, ok := s.objectIdempotency[idemKey]; ok {
+		if record, exists := s.objects[id]; exists {
+			return record, nil
+		}
 	}
 	now := s.now().UTC()
 	record := ports.StorageObjectRecord{
@@ -217,9 +254,8 @@ func (s *LocalStorageService) CreateObject(ctx context.Context, request ports.St
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	s.objects[record.ObjectID] = record
+	s.objectIdempotency[idemKey] = record.ObjectID
 	if err := s.upsertObject(ctx, record); err != nil {
 		return ports.StorageObjectRecord{}, err
 	}

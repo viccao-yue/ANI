@@ -10,10 +10,11 @@ import (
 func TestStorageAPIDevProfileVolumeFilesystemAndObject(t *testing.T) {
 	api := newStorageAPI()
 	volume, err := api.service.CreateVolume(context.Background(), ports.StorageVolumeCreateRequest{
-		TenantID:     "tenant-a",
-		Name:         "data-a",
-		SizeGiB:      100,
-		StorageClass: "fast",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "api-volume-a",
+		Name:           "data-a",
+		SizeGiB:        100,
+		StorageClass:   "fast",
 	})
 	if err != nil {
 		t.Fatalf("CreateVolume error = %v", err)
@@ -24,10 +25,11 @@ func TestStorageAPIDevProfileVolumeFilesystemAndObject(t *testing.T) {
 		requireLocalCoreDevProfile(t, got.DevProfile, "local-storage-service")
 	}
 	filesystem, err := api.service.CreateFilesystem(context.Background(), ports.StorageFilesystemCreateRequest{
-		TenantID: "tenant-a",
-		Name:     "shared",
-		Protocol: "nfs",
-		SizeGiB:  500,
+		TenantID:       "tenant-a",
+		IdempotencyKey: "api-fs-a",
+		Name:           "shared",
+		Protocol:       "nfs",
+		SizeGiB:        500,
 	})
 	if err != nil {
 		t.Fatalf("CreateFilesystem error = %v", err)
@@ -38,11 +40,12 @@ func TestStorageAPIDevProfileVolumeFilesystemAndObject(t *testing.T) {
 		requireLocalCoreDevProfile(t, got.DevProfile, "local-storage-service")
 	}
 	object, err := api.service.CreateObject(context.Background(), ports.StorageObjectCreateRequest{
-		TenantID:    "tenant-a",
-		Bucket:      "models",
-		Key:         "llm/model.bin",
-		SizeBytes:   1024,
-		ContentType: "application/octet-stream",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "api-object-a",
+		Bucket:         "models",
+		Key:            "llm/model.bin",
+		SizeBytes:      1024,
+		ContentType:    "application/octet-stream",
 	})
 	if err != nil {
 		t.Fatalf("CreateObject error = %v", err)
@@ -57,9 +60,10 @@ func TestStorageAPIDevProfileVolumeFilesystemAndObject(t *testing.T) {
 func TestStorageAPIServiceKeepsTenantIsolation(t *testing.T) {
 	api := newStorageAPI()
 	volume, err := api.service.CreateVolume(context.Background(), ports.StorageVolumeCreateRequest{
-		TenantID: "tenant-a",
-		Name:     "tenant-a-volume",
-		SizeGiB:  10,
+		TenantID:       "tenant-a",
+		IdempotencyKey: "api-volume-b",
+		Name:           "tenant-a-volume",
+		SizeGiB:        10,
 	})
 	if err != nil {
 		t.Fatalf("CreateVolume error = %v", err)

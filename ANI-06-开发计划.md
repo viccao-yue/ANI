@@ -23,12 +23,12 @@
 ### 项目全局进度
 
 ```
-当前阶段：Phase 1 / Sprint 4（API Beta 准备 + SDK 加固 + Mock Server）
+当前阶段：Phase 1 / Sprint 4 收尾（开发与验收完成，待提交 GitHub）
 当前不是 Phase 2：Phase 2 指 2026-10 以后延期能力，不是下一次开发阶段
 交付目标：2026-09-30 ANI Core v1.0.0 + ANI Services P0
 关键节奏：ANI Core 必须先在 2026-06 上中旬解锁 ANI Services 开发，不能等到 2026-09-30 才完成接口与 SDK
 刚完成：Sprint 3（2026-05-20，网络/存储/向量/Workload Identity/SDK Alpha/Core Dev Profile Ready）
-下一步：按 repo/CURRENT-SPRINT.md 执行 Sprint 4
+下一步：先提交 Sprint 4 到 GitHub；提交完成后再按 repo/CURRENT-SPRINT.md 切换下一阶段开发
 ```
 
 | 阶段 | 状态 | 完成时间 | 说明 |
@@ -39,7 +39,7 @@
 | **Sprint 1** | ✅ 已完成 | 2026-05-18 | 操作语义底座 + Health + Idempotency + Auth Final |
 | **Sprint 2** | ✅ 已完成 | 2026-05-20 | VM & Container/GPU 深度 + **Core API Alpha Freeze** |
 | Sprint 3 | ✅ 已完成 | 2026-05-20 | 网络/存储/向量 API + **SDK Alpha + Dev Profile Ready** |
-| Sprint 4 ⭐（当前） | 🔄 提前启动 | 2026-05-20 起；计划窗口 2026-07-01~07-15 | API Beta 准备 + 四语言 SDK + Mock Server |
+| Sprint 4 ⭐（当前） | ✅ 开发与验收完成，待提交 GitHub | 2026-05-21（开发验收完成）；计划窗口 2026-07-01~07-15 | API Beta 准备 + 四语言 SDK + Mock Server |
 | Sprint 5 | ⏳ 计划中 | 2026-07-16~07-31 | **K8s集群(vCluster)** + 控制器 + 加解密 ← K8S-A 恢复 v1.0.0 |
 | Sprint 6 | ⏳ 计划中 | 2026-08-01~08-15 | Sandbox + 平台支撑 + Services 模型仓库/推理 |
 | Sprint 7 | ⏳ 计划中 | 2026-08-16~09-01 | Installer + 知识库 RAG（从零建）+ Console Alpha |
@@ -77,17 +77,17 @@ ANI Core 的 Phase 1 有两个交付对象：先交付给 ANI Services 开发团
 | SDK-ALPHA-A（四语言 SDK Alpha）| P0 ⭐ | ✅ Alpha 生成和 smoke 门禁已完成：Core/Services 四语言 SDK 生成、分层隔离和 smoke 校验 |
 | CORE-DEV-PROFILE-A（原 MOCK-DEV-A）| P0 | ✅ 已完成：Core P0 API dev/local profile 显式标记、合同守卫和 SDK 对齐；不做 Services 业务 mock |
 
-### 当前冲刺：Sprint 4（2026-05-20 提前启动 → 2026-07-15）
+### 当前冲刺：Sprint 4 收尾（2026-05-20 提前启动 → 2026-07-15）
 
 | 批次 | 优先级 | 状态 |
 |---|---|---|
 | SPEC-SPLIT-A | P0 | ✅ 已完成：Core/Services API 分层收口，Services 业务路径迁移到 `api/openapi/services/v1.yaml`，Gateway 改挂 `/api/v1/svc` |
-| SPEC-CORE-BETA | P0 | ⏳ 待开始：Sprint 1-3 新路径 Beta 化审查 |
-| SDK-GO-A / SDK-PY-A / SDK-TS-A / SDK-JAVA-A | P0 | ⏳ 待开始：四语言 SDK 加固 |
-| MOCK-A | P0 | ⏳ 待开始：Core Mock Server |
-| DOC-API-A | P0 | ⏳ 待开始：API 文档生成 |
+| SPEC-CORE-BETA | P0 | ✅ 开发与验收完成，待提交 GitHub：Beta 准备矩阵、`SPEC-COMPAT-A` Core API v1 兼容性基线、SDK helper、四语言 SDK-Mock 联动烟测、Mock Server、API 文档、`SPRINT4-CLOSURE-A` 关联性闭环和提交前审查均已通过 |
+| SDK-GO-A / SDK-PY-A / SDK-TS-A / SDK-JAVA-A | P0 | ✅ 开发与验收完成：`SDK-BETA-A` 幂等 helper、`SDK-BETA-B` cursor 分页 helper、`SDK-BETA-C` 统一错误 helper、`SDK-BETA-D` 四语言示例、`SDK-MOCK-SMOKE-A`、`SDK-MOCK-SMOKE-B`、`SDK-MOCK-SMOKE-C`、`SDK-MOCK-SMOKE-D` 四语言 SDK 调 Mock Server 烟测已完成 |
+| MOCK-A | P0 | ✅ 首个切片完成：Core Mock Server 由 `api/openapi/v1.yaml` 驱动，`make validate-mock-a` 校验全量 Core path 覆盖 |
+| DOC-API-A | P0 | ✅ 首个切片完成：Core/Services 静态 API 文档由 API 契约生成，`make validate-doc-api` 校验覆盖 |
 
-**→ 今天该做什么，只看 [`repo/CURRENT-SPRINT.md`](repo/CURRENT-SPRINT.md)。**
+**→ 明日继续入口：先按 [`repo/CURRENT-SPRINT.md`](repo/CURRENT-SPRINT.md) 完成 Sprint 4 GitHub 提交；提交完成后再切换下一 Sprint / 下一阶段开发。**
 
 ### 已完成批次完整记录
 
@@ -300,6 +300,7 @@ make gen-core-sdk        # Go/Python/TypeScript/Java SDK 可生成
 | 批次 | 内容 | 难度 | 预估 |
 |---|---|---|---|
 | **SPEC-CORE-BETA** | 将 Sprint 1-3 所有新路径补齐到 Beta：schema、分页、idempotency、错误码、状态机、RBAC scope | 中 | 3天 |
+| **SPEC-COMPAT-A** | 建立 Core API v1 兼容性基线，阻止误删 path/method/operationId/参数/响应/schema 字段 | 低 | 0.5天 |
 | **SPEC-SPLIT-A** | /models /inference-services /knowledge-bases 移至 api/openapi/services/v1.yaml | 低 | 1天 |
 | **SDK-GO-A** | oapi-codegen 生成 Go SDK（sdks/ani-go/） | 低 | 1天 |
 | **SDK-PY-A** | openapi-generator 生成 Python SDK（sdks/ani-python/） | 低 | 1天 |

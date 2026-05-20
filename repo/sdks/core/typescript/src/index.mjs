@@ -172,6 +172,40 @@ export const schemas = [
   "VectorStoreState",
   "WorkloadIdentityBinding"
 ];
+export const idempotencyOperations = [
+  "createStorageFilesystem",
+  "createInstance",
+  "applyInstanceLifecycle",
+  "createNetworkLoadBalancer",
+  "createNetworkSecurityGroup",
+  "createNetworkSubnet",
+  "createNetworkVPC",
+  "createStorageObject",
+  "createVectorStore",
+  "createStorageVolume"
+];
+export const cursorPaginationOperations = [
+  "listStorageFilesystems",
+  "listInstances",
+  "listInstanceOperations",
+  "listNetworkLoadBalancers",
+  "listNetworkSecurityGroups",
+  "listNetworkSubnets",
+  "listNetworkVPCs",
+  "listStorageObjects",
+  "listVectorStores",
+  "listStorageVolumes"
+];
+export const errorCodes = [
+  "BAD_REQUEST",
+  "CONFLICT",
+  "FORBIDDEN",
+  "INTERNAL_ERROR",
+  "NOT_FOUND",
+  "NOT_IMPLEMENTED",
+  "RATE_LIMIT_EXCEEDED",
+  "UNAUTHORIZED"
+];
 
 export class Client {
   constructor(options = {}) {
@@ -182,4 +216,94 @@ export class Client {
   hasOperation(operationID) {
     return operations.includes(operationID);
   }
+
+  async request(method, path, options = {}) {
+    const response = await fetch(this.url(path, options.params), {
+      method: method.toUpperCase(),
+      headers: this.headers(options.headers, options.body !== undefined),
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+    const payload = await this.decodeResponse(response);
+    if (!response.ok) {
+      if (payload && typeof payload === "object" && "code" in payload && "message" in payload) {
+        throw apiError(String(payload.code), String(payload.message), String(payload.request_id || ""), payload.details);
+      }
+      throw new Error(`ANI API request failed: ${response.status}`);
+    }
+    return payload;
+  }
+
+  url(path, params = {}) {
+    const base = this.baseURL.replace(/\/$/, "");
+    const relative = path.startsWith("/") ? path : `/${path}`;
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined) {
+        query.set(key, String(value));
+      }
+    }
+    const suffix = query.toString();
+    return `${base}${relative}${suffix ? `?${suffix}` : ""}`;
+  }
+
+  headers(headers = {}, hasBody = false) {
+    return {
+      Accept: "application/json",
+      ...(hasBody ? { "Content-Type": "application/json" } : {}),
+      ...(this.token ? { Authorization: `Bearer ${this.token}` } : {}),
+      ...headers,
+    };
+  }
+
+  async decodeResponse(response) {
+    if (response.status === 204) {
+      return undefined;
+    }
+    const text = await response.text();
+    if (!text) {
+      return undefined;
+    }
+    const contentType = response.headers.get("content-type") || "";
+    return contentType.includes("application/json") ? JSON.parse(text) : text;
+  }
+}
+
+export function newIdempotencyKey(prefix = "ani") {
+  const safePrefix = prefix || "ani";
+  const cryptoObj = globalThis.crypto;
+  if (cryptoObj?.randomUUID) {
+    return `${safePrefix}_${cryptoObj.randomUUID()}`;
+  }
+  const bytes = new Uint8Array(16);
+  if (cryptoObj?.getRandomValues) {
+    cryptoObj.getRandomValues(bytes);
+  } else {
+    for (let i = 0; i < bytes.length; i += 1) {
+      bytes[i] = Math.floor(Math.random() * 256);
+    }
+  }
+  return `${safePrefix}_${Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("")}`;
+}
+
+export function withIdempotencyKey(body = {}, key = newIdempotencyKey()) {
+  return { ...body, idempotency_key: key };
+}
+
+export function cursorParams(limit, cursor) {
+  const params = {};
+  if (limit !== undefined && limit > 0) {
+    params.limit = String(limit);
+  }
+  if (cursor) {
+    params.cursor = cursor;
+  }
+  return params;
+}
+
+export function isAPIErrorCode(code) {
+  return errorCodes.includes(code);
+}
+
+export function apiError(code, message, requestID = "", details) {
+  return { code, message, request_id: requestID, ...(details ? { details } : {}) };
 }

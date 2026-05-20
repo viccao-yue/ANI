@@ -452,6 +452,7 @@ components:
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/NetworkVPC' } }
         total: { type: integer }
+        next_cursor: { type: string, nullable: true }
 
     NetworkSubnetListResponse:
       type: object
@@ -459,6 +460,7 @@ components:
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/NetworkSubnet' } }
         total: { type: integer }
+        next_cursor: { type: string, nullable: true }
 
     NetworkSecurityGroupListResponse:
       type: object
@@ -466,6 +468,7 @@ components:
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/NetworkSecurityGroup' } }
         total: { type: integer }
+        next_cursor: { type: string, nullable: true }
 
     NetworkLoadBalancerListResponse:
       type: object
@@ -473,41 +476,46 @@ components:
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/NetworkLoadBalancer' } }
         total: { type: integer }
+        next_cursor: { type: string, nullable: true }
 
     CreateNetworkVPCRequest:
       type: object
-      required: [name]
+      required: [name, idempotency_key]
       properties:
+        idempotency_key: { type: string, minLength: 1, maxLength: 128, description: "客户端生成；同一 tenant_id 下 24 小时内去重" }
         name: { type: string, minLength: 1, maxLength: 128 }
         cidr: { type: string, default: "10.0.0.0/16" }
 
     CreateNetworkSubnetRequest:
       type: object
-      required: [vpc_id, name]
+      required: [vpc_id, name, idempotency_key]
       properties:
-        vpc_id:  { type: string }
-        name:    { type: string, minLength: 1, maxLength: 128 }
-        cidr:    { type: string, default: "10.0.1.0/24" }
-        gateway: { type: string, nullable: true }
+        idempotency_key: { type: string, minLength: 1, maxLength: 128, description: "客户端生成；同一 tenant_id 下 24 小时内去重" }
+        vpc_id:          { type: string }
+        name:            { type: string, minLength: 1, maxLength: 128 }
+        cidr:            { type: string, default: "10.0.1.0/24" }
+        gateway:         { type: string, nullable: true }
 
     CreateNetworkSecurityGroupRequest:
       type: object
-      required: [name]
+      required: [name, idempotency_key]
       properties:
-        name:        { type: string, minLength: 1, maxLength: 128 }
-        description: { type: string, nullable: true }
+        idempotency_key: { type: string, minLength: 1, maxLength: 128, description: "客户端生成；同一 tenant_id 下 24 小时内去重" }
+        name:            { type: string, minLength: 1, maxLength: 128 }
+        description:     { type: string, nullable: true }
         rules:
           type: array
           items: { $ref: '#/components/schemas/NetworkSecurityGroupRule' }
 
     CreateNetworkLoadBalancerRequest:
       type: object
-      required: [name, vpc_id]
+      required: [name, vpc_id, idempotency_key]
       properties:
-        name:      { type: string, minLength: 1, maxLength: 128 }
-        vpc_id:    { type: string }
-        subnet_id: { type: string, nullable: true }
-        scheme:    { type: string, enum: [internal, public], default: internal }
+        idempotency_key: { type: string, minLength: 1, maxLength: 128, description: "客户端生成；同一 tenant_id 下 24 小时内去重" }
+        name:            { type: string, minLength: 1, maxLength: 128 }
+        vpc_id:          { type: string }
+        subnet_id:       { type: string, nullable: true }
+        scheme:          { type: string, enum: [internal, public], default: internal }
         listeners:
           type: array
           items: { $ref: '#/components/schemas/NetworkLoadBalancerListener' }
@@ -572,6 +580,7 @@ components:
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/StorageVolume' } }
         total: { type: integer }
+        next_cursor: { type: string, nullable: true }
 
     StorageFilesystemListResponse:
       type: object
@@ -579,6 +588,7 @@ components:
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/StorageFilesystem' } }
         total: { type: integer }
+        next_cursor: { type: string, nullable: true }
 
     StorageObjectListResponse:
       type: object
@@ -586,31 +596,35 @@ components:
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/StorageObject' } }
         total: { type: integer }
+        next_cursor: { type: string, nullable: true }
 
     CreateStorageVolumeRequest:
       type: object
-      required: [name, size_gib]
+      required: [name, size_gib, idempotency_key]
       properties:
-        name:          { type: string, minLength: 1, maxLength: 128 }
-        size_gib:      { type: integer, format: int64, minimum: 1 }
-        storage_class: { type: string, default: standard }
+        idempotency_key: { type: string, minLength: 1, maxLength: 128, description: "客户端生成；同一 tenant_id 下 24 小时内去重" }
+        name:            { type: string, minLength: 1, maxLength: 128 }
+        size_gib:        { type: integer, format: int64, minimum: 1 }
+        storage_class:   { type: string, default: standard }
 
     CreateStorageFilesystemRequest:
       type: object
-      required: [name, size_gib]
+      required: [name, size_gib, idempotency_key]
       properties:
-        name:     { type: string, minLength: 1, maxLength: 128 }
-        protocol: { type: string, enum: [nfs, cephfs], default: nfs }
-        size_gib: { type: integer, format: int64, minimum: 1 }
+        idempotency_key: { type: string, minLength: 1, maxLength: 128, description: "客户端生成；同一 tenant_id 下 24 小时内去重" }
+        name:            { type: string, minLength: 1, maxLength: 128 }
+        protocol:        { type: string, enum: [nfs, cephfs], default: nfs }
+        size_gib:        { type: integer, format: int64, minimum: 1 }
 
     CreateStorageObjectRequest:
       type: object
-      required: [bucket, key]
+      required: [bucket, key, idempotency_key]
       properties:
-        bucket:       { type: string, minLength: 1, maxLength: 128 }
-        key:          { type: string, minLength: 1, maxLength: 1024 }
-        size_bytes:   { type: integer, format: int64, minimum: 0, default: 0 }
-        content_type: { type: string, default: application/octet-stream }
+        idempotency_key: { type: string, minLength: 1, maxLength: 128, description: "客户端生成；同一 tenant_id 下 24 小时内去重" }
+        bucket:          { type: string, minLength: 1, maxLength: 128 }
+        key:             { type: string, minLength: 1, maxLength: 1024 }
+        size_bytes:      { type: integer, format: int64, minimum: 0, default: 0 }
+        content_type:    { type: string, default: application/octet-stream }
 
     VectorStoreState:
       type: string
@@ -638,14 +652,16 @@ components:
       properties:
         items: { type: array, items: { $ref: '#/components/schemas/VectorStore' } }
         total: { type: integer }
+        next_cursor: { type: string, nullable: true }
 
     CreateVectorStoreRequest:
       type: object
-      required: [name, dimension]
+      required: [name, dimension, idempotency_key]
       properties:
-        name:      { type: string, minLength: 1, maxLength: 128 }
-        dimension: { type: integer, minimum: 1 }
-        metric:    { type: string, enum: [cosine, l2, ip], default: cosine }
+        idempotency_key: { type: string, minLength: 1, maxLength: 128, description: "客户端生成；同一 tenant_id 下 24 小时内去重" }
+        name:            { type: string, minLength: 1, maxLength: 128 }
+        dimension:       { type: integer, minimum: 1 }
+        metric:          { type: string, enum: [cosine, l2, ip], default: cosine }
 
     VectorStoreSearchRequest:
       type: object
@@ -1164,6 +1180,9 @@ paths:
       summary: 查询 VPC 列表
       tags: [Networks]
       x-ani-rbac-scope: "scope:networks:read"
+      parameters:
+        - { name: limit,  in: query, schema: { type: integer, default: 20, minimum: 1, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string } }
       responses:
         "200":
           description: VPC 列表
@@ -1232,6 +1251,9 @@ paths:
       summary: 查询子网列表
       tags: [Networks]
       x-ani-rbac-scope: "scope:networks:read"
+      parameters:
+        - { name: limit,  in: query, schema: { type: integer, default: 20, minimum: 1, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string } }
       responses:
         "200":
           description: 子网列表
@@ -1301,6 +1323,9 @@ paths:
       summary: 查询安全组列表
       tags: [Networks]
       x-ani-rbac-scope: "scope:networks:read"
+      parameters:
+        - { name: limit,  in: query, schema: { type: integer, default: 20, minimum: 1, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string } }
       responses:
         "200":
           description: 安全组列表
@@ -1369,6 +1394,9 @@ paths:
       summary: 查询负载入口列表
       tags: [Networks]
       x-ani-rbac-scope: "scope:networks:read"
+      parameters:
+        - { name: limit,  in: query, schema: { type: integer, default: 20, minimum: 1, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string } }
       responses:
         "200":
           description: 负载入口列表
@@ -1439,6 +1467,9 @@ paths:
       summary: 查询块存储卷列表
       tags: [Volumes]
       x-ani-rbac-scope: "scope:volumes:read"
+      parameters:
+        - { name: limit,  in: query, schema: { type: integer, default: 20, minimum: 1, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string } }
       responses:
         "200":
           description: 块存储卷列表
@@ -1507,6 +1538,9 @@ paths:
       summary: 查询文件存储列表
       tags: [Filesystems]
       x-ani-rbac-scope: "scope:filesystems:read"
+      parameters:
+        - { name: limit,  in: query, schema: { type: integer, default: 20, minimum: 1, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string } }
       responses:
         "200":
           description: 文件存储列表
@@ -1575,6 +1609,9 @@ paths:
       summary: 查询对象元数据列表
       tags: [ObjectStore]
       x-ani-rbac-scope: "scope:objects:read"
+      parameters:
+        - { name: limit,  in: query, schema: { type: integer, default: 20, minimum: 1, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string } }
       responses:
         "200":
           description: 对象元数据列表
@@ -1644,6 +1681,9 @@ paths:
       summary: 查询向量存储列表
       tags: [VectorStore]
       x-ani-rbac-scope: "scope:vector-stores:read"
+      parameters:
+        - { name: limit,  in: query, schema: { type: integer, default: 20, minimum: 1, maximum: 100 } }
+        - { name: cursor, in: query, schema: { type: string } }
       responses:
         "200":
           description: 向量存储列表

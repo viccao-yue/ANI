@@ -16,9 +16,10 @@ type vectorStoreAPI struct {
 }
 
 type createVectorStoreRequest struct {
-	Name      string `json:"name"`
-	Dimension int    `json:"dimension"`
-	Metric    string `json:"metric"`
+	IdempotencyKey string `json:"idempotency_key"`
+	Name           string `json:"name"`
+	Dimension      int    `json:"dimension"`
+	Metric         string `json:"metric"`
 }
 
 type searchVectorStoreRequest struct {
@@ -66,10 +67,11 @@ func (api *vectorStoreAPI) createVectorStore(ctx context.Context, c *app.Request
 		return
 	}
 	record, err := api.service.CreateVectorStore(ctx, ports.VectorStoreCreateRequest{
-		TenantID:  demoTenantID(c),
-		Name:      req.Name,
-		Dimension: req.Dimension,
-		Metric:    req.Metric,
+		TenantID:       demoTenantID(c),
+		IdempotencyKey: req.IdempotencyKey,
+		Name:           req.Name,
+		Dimension:      req.Dimension,
+		Metric:         req.Metric,
 	})
 	if err != nil {
 		writeVectorStoreError(c, err)
@@ -88,7 +90,7 @@ func (api *vectorStoreAPI) listVectorStores(ctx context.Context, c *app.RequestC
 	for _, record := range records {
 		items = append(items, vectorStoreFromRecord(record))
 	}
-	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items)})
+	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items), "next_cursor": nil})
 }
 
 func (api *vectorStoreAPI) getVectorStore(ctx context.Context, c *app.RequestContext) {

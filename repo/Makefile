@@ -2,12 +2,12 @@
 # 使用方式：make <target>
 
 .PHONY: help deps deps-down deps-status deps-clean \
-        tools-proto gen-api gen-proto gen-core-sdk \
+        tools-proto gen-api gen-proto gen-core-sdk gen-api-docs \
         build build-gateway build-auth-service build-model-service build-task-service \
         test test-go test-python test-cover \
-        validate-infra validate-gpu-preflight validate-gpu-contracts validate-runtime-contracts validate-instance-contracts validate-instance-planner validate-instance-renderer validate-instance-admission validate-instance-audit validate-instance-provider-dry-run validate-instance-provider-apply validate-instance-status-reconcile validate-instance-orchestrator validate-instance-store validate-instance-provider-adapter validate-instance-service validate-instance-lifecycle-ops validate-m1-e2e validate-kubernetes-provider-execution validate-kubernetes-rest-client validate-kubernetes-bootstrap-wiring validate-kubernetes-lifecycle-execution validate-kubernetes-ops-execution validate-m1-real-provider-profile validate-demo-instances validate-core-alpha validate-network-alpha validate-storage-alpha validate-vector-alpha validate-workload-identity validate-core-dev-profile validate-sdk-alpha validate-sprint3-closure validate-spec-split validate-auth-contract validate-auth-dex-smoke validate-architecture \
+        validate-infra validate-gpu-preflight validate-gpu-contracts validate-runtime-contracts validate-instance-contracts validate-instance-planner validate-instance-renderer validate-instance-admission validate-instance-audit validate-instance-provider-dry-run validate-instance-provider-apply validate-instance-status-reconcile validate-instance-orchestrator validate-instance-store validate-instance-provider-adapter validate-instance-service validate-instance-lifecycle-ops validate-m1-e2e validate-kubernetes-provider-execution validate-kubernetes-rest-client validate-kubernetes-bootstrap-wiring validate-kubernetes-lifecycle-execution validate-kubernetes-ops-execution validate-m1-real-provider-profile validate-demo-instances validate-core-alpha validate-network-alpha validate-storage-alpha validate-vector-alpha validate-workload-identity validate-core-dev-profile validate-sdk-alpha validate-sdk-beta validate-sdk-mock-smoke validate-sprint3-closure validate-sprint4-closure validate-spec-split validate-core-beta validate-core-api-compatibility validate-mock-a validate-doc-api validate-auth-contract validate-auth-dex-smoke validate-architecture \
         lint lint-go lint-python lint-ts \
-        dev-gateway dev-console \
+        dev-gateway dev-console dev-core-mock \
         image image-gateway \
         clean
 
@@ -26,6 +26,8 @@ help:
 	@echo "    make gen-api        从 OpenAPI Spec 生成 Go/TS 代码"
 	@echo "    make gen-proto      从 Protobuf 生成 Go gRPC 代码"
 	@echo "    make gen-core-sdk   从 Core/Services API 契约生成四语言 SDK Alpha"
+	@echo "    make gen-api-docs   从 Core/Services API 契约生成静态 API 文档"
+	@echo "    make gen-core-api-compat-baseline  生成 Core API v1 兼容性基线（仅有意更新时使用）"
 	@echo ""
 	@echo "  构建:"
 	@echo "    make build          构建所有 Go 服务和工具"
@@ -69,8 +71,15 @@ help:
 	@echo "    make validate-workload-identity 校验 Sprint 3 Workload Identity 契约"
 	@echo "    make validate-core-dev-profile 校验 Sprint 3 Core dev/local profile 边界"
 	@echo "    make validate-sdk-alpha 校验 Sprint 3 四语言 SDK Alpha"
+	@echo "    make validate-sdk-beta 校验 Sprint 4 SDK Beta 幂等 helper"
+	@echo "    make validate-sdk-mock-smoke 校验 Sprint 4 四语言 SDK 调用 Core Mock Server"
 	@echo "    make validate-sprint3-closure 校验 Sprint 3 闭环审查门禁"
+	@echo "    make validate-sprint4-closure 校验 Sprint 4 关联性闭环门禁"
 	@echo "    make validate-spec-split 校验 Sprint 4 Core/Services API 分层"
+	@echo "    make validate-core-beta 校验 Sprint 4 Core API Beta 准备矩阵"
+	@echo "    make validate-core-api-compatibility 校验 Sprint 4 Core API v1 兼容性基线"
+	@echo "    make validate-mock-a 校验 Sprint 4 Core Mock Server 覆盖"
+	@echo "    make validate-doc-api 校验 Sprint 4 静态 API 文档"
 	@echo "    make validate-auth-contract 校验 M2.2 Auth Gateway/API 契约一致性"
 	@echo "    make validate-auth-dex-smoke 校验 M2.2 Docker Dex OIDC auth-code flow（需 Docker）"
 	@echo "    make validate-architecture 校验 ports/adapters 组件边界"
@@ -81,6 +90,7 @@ help:
 	@echo "  本地开发:"
 	@echo "    make dev-gateway    启动 ANI Gateway（热重载）"
 	@echo "    make dev-console    启动 Console 前端（Vite HMR）"
+	@echo "    make dev-core-mock  启动 Core API Mock Server（http://127.0.0.1:4010/api/v1）"
 
 # ── 依赖服务 ──────────────────────────────────────────────────────────────────
 COMPOSE = docker compose -f deploy/docker/docker-compose.yml
@@ -136,6 +146,16 @@ gen-core-sdk:
 	@echo "→ 从 Core/Services API 契约生成四语言 SDK Alpha..."
 	python scripts/gen_sdk_alpha.py
 	@echo "✅ SDK Alpha 生成完成"
+
+gen-api-docs:
+	@echo "→ 从 Core/Services API 契约生成静态 API 文档..."
+	python scripts/generate_api_docs.py
+	@echo "✅ API docs generated"
+
+gen-core-api-compat-baseline:
+	@echo "→ 生成 Core API v1 兼容性基线..."
+	python scripts/generate_core_api_compatibility_baseline.py
+	@echo "✅ Core API compatibility baseline generated"
 
 # ── 构建 ──────────────────────────────────────────────────────────────────────
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
@@ -437,6 +457,17 @@ validate-sdk-alpha:
 	python scripts/validate_sdk_alpha.py
 	@echo "✅ SDK Alpha valid"
 
+validate-sdk-beta:
+	@echo "→ 校验 Sprint 4 SDK Beta helper..."
+	python scripts/validate_sdk_beta.py
+	$(MAKE) validate-sdk-alpha
+	@echo "✅ SDK Beta helpers valid"
+
+validate-sdk-mock-smoke:
+	@echo "→ 校验 Sprint 4 SDK-MOCK-SMOKE-A/B/C/D 四语言 SDK 调用 Core Mock Server..."
+	python scripts/validate_sdk_mock_smoke.py
+	@echo "✅ SDK mock smoke valid"
+
 validate-sprint3-closure:
 	@echo "→ 校验 Sprint 3 闭环审查门禁..."
 	python scripts/validate_sprint3_closure.py
@@ -448,11 +479,44 @@ validate-sprint3-closure:
 	$(MAKE) validate-core-dev-profile
 	@echo "✅ Sprint 3 closure valid"
 
+validate-sprint4-closure:
+	@echo "→ 校验 Sprint 4 关联性闭环门禁..."
+	python scripts/validate_sprint4_closure.py
+	$(MAKE) validate-spec-split
+	$(MAKE) validate-core-beta
+	$(MAKE) validate-core-api-compatibility
+	$(MAKE) validate-sdk-beta
+	$(MAKE) validate-mock-a
+	$(MAKE) validate-doc-api
+	$(MAKE) validate-sdk-mock-smoke
+	@echo "✅ Sprint 4 closure valid"
+
 validate-spec-split:
 	@echo "→ 校验 Sprint 4 SPEC-SPLIT-A Core/Services API 分层..."
 	python scripts/validate_spec_split_contract.py
 	$(GO_CACHE_ENV) go test ./services/ani-gateway/internal/middleware ./services/ani-gateway/internal/router -run 'TestInferPermission|TestAuthPublicPaths|TestAuthProtectedPaths' -v
 	@echo "✅ SPEC-SPLIT-A contract valid"
+
+validate-core-beta:
+	@echo "→ 校验 Sprint 4 SPEC-CORE-BETA Core API Beta 准备矩阵..."
+	python scripts/validate_core_beta_contract.py
+	$(GO_CACHE_ENV) go test ./pkg/adapters/runtime ./services/ani-gateway/internal/router -run 'TestLocalNetworkService|TestLocalStorageService|TestLocalVectorStoreService|TestNetworkAPI|TestStorageAPI|TestVectorStoreAPI' -v
+	@echo "✅ SPEC-CORE-BETA contract valid"
+
+validate-core-api-compatibility:
+	@echo "→ 校验 Sprint 4 SPEC-COMPAT-A Core API v1 兼容性基线..."
+	python scripts/validate_core_api_compatibility.py
+	@echo "✅ Core API v1 compatibility valid"
+
+validate-mock-a:
+	@echo "→ 校验 Sprint 4 MOCK-A Core Mock Server 覆盖..."
+	python scripts/validate_mock_server_contract.py
+	@echo "✅ MOCK-A Core Mock Server contract valid"
+
+validate-doc-api:
+	@echo "→ 校验 Sprint 4 DOC-API-A 静态 API 文档..."
+	python scripts/validate_api_docs_contract.py
+	@echo "✅ DOC-API-A static API docs valid"
 
 validate-auth-contract:
 	@echo "→ 校验 M2.2 Auth Gateway/API 契约..."
@@ -494,6 +558,10 @@ dev-gateway:
 dev-console:
 	@echo "→ 启动 Console 前端（Vite HMR）..."
 	cd frontends/console && pnpm dev
+
+dev-core-mock:
+	@echo "→ 启动 Core API Mock Server..."
+	python scripts/serve_core_mock.py --host 127.0.0.1 --port 4010
 
 # ── 镜像构建 ──────────────────────────────────────────────────────────────────
 REGISTRY ?= harbor.ani.internal/ani

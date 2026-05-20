@@ -1,0 +1,3031 @@
+batch: SPEC-COMPAT-A
+phase: Phase 1 / Sprint 4
+source: api/openapi/v1.yaml
+generated_at: '2026-05-21'
+compatibility_rules:
+  allowed:
+  - Add optional request fields.
+  - Add response fields.
+  - Add endpoints.
+  - Add enum values.
+  forbidden:
+  - Remove paths or HTTP methods.
+  - Change operationId.
+  - Remove existing parameters.
+  - Remove required request fields.
+  - Remove response fields.
+  - Change existing field schema signatures.
+paths:
+  /auth/api-keys:
+    get:
+      operation_id: listAPIKeys
+      rbac_scope: ''
+      parameters:
+      - in: query
+        name: user_id
+        required: false
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: ListAPIKeysResponse
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+    post:
+      operation_id: createAPIKey
+      rbac_scope: ''
+      parameters: []
+      request_body_required: true
+      request_schema: CreateAPIKeyRequest
+      responses:
+        '201':
+          schema: CreateAPIKeyResponse
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+  /auth/api-keys/{key_id}:
+    delete:
+      operation_id: revokeAPIKey
+      rbac_scope: ''
+      parameters:
+      - in: path
+        name: key_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: 'type: object'
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /auth/logout:
+    post:
+      operation_id: logout
+      rbac_scope: ''
+      parameters: []
+      request_body_required: true
+      request_schema: LogoutRequest
+      responses:
+        '200':
+          schema: RevokeStatusResponse
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+  /auth/oidc/begin:
+    post:
+      operation_id: beginOIDCLogin
+      rbac_scope: ''
+      parameters: []
+      request_body_required: true
+      request_schema: BeginOIDCLoginRequest
+      responses:
+        '200':
+          schema: BeginOIDCLoginResponse
+        '400':
+          schema: '{}'
+  /auth/refresh:
+    post:
+      operation_id: ''
+      rbac_scope: ''
+      parameters: []
+      request_body_required: true
+      request_schema: RefreshAccessTokenRequest
+      responses:
+        '200':
+          schema: RefreshAccessTokenResponse
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+  /auth/token:
+    post:
+      operation_id: completeOIDCLogin
+      rbac_scope: ''
+      parameters: []
+      request_body_required: true
+      request_schema: CompleteOIDCLoginRequest
+      responses:
+        '200':
+          schema: TokenPairResponse
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+  /branding:
+    get:
+      operation_id: ''
+      rbac_scope: ''
+      parameters: []
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: '{}'
+  /filesystems:
+    get:
+      operation_id: listStorageFilesystems
+      rbac_scope: scope:filesystems:read
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: StorageFilesystemListResponse
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+    post:
+      operation_id: createStorageFilesystem
+      rbac_scope: scope:filesystems:create
+      parameters: []
+      request_body_required: true
+      request_schema: CreateStorageFilesystemRequest
+      responses:
+        '201':
+          schema: StorageFilesystem
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+  /filesystems/{filesystem_id}:
+    delete:
+      operation_id: deleteStorageFilesystem
+      rbac_scope: scope:filesystems:delete
+      parameters:
+      - in: path
+        name: filesystem_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: StorageFilesystem
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+    get:
+      operation_id: getStorageFilesystem
+      rbac_scope: scope:filesystems:read
+      parameters:
+      - in: path
+        name: filesystem_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: StorageFilesystem
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /healthz:
+    get:
+      operation_id: liveness
+      rbac_scope: ''
+      parameters: []
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: 'type: object'
+        '503':
+          schema: ErrorResponse
+  /instance-operations/{operation_id}:
+    get:
+      operation_id: getInstanceOperation
+      rbac_scope: scope:instances:read
+      parameters:
+      - in: path
+        name: operation_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: InstanceOperation
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /instances:
+    get:
+      operation_id: listInstances
+      rbac_scope: scope:instances:read
+      parameters:
+      - in: query
+        name: kind
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: InstanceListResponse
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+    post:
+      operation_id: createInstance
+      rbac_scope: scope:instances:create
+      parameters: []
+      request_body_required: true
+      request_schema: CreateInstanceRequest
+      responses:
+        '201':
+          schema: CreateInstanceResponse
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '409':
+          schema: '{}'
+  /instances/{instance_id}:
+    get:
+      operation_id: getInstance
+      rbac_scope: scope:instances:read
+      parameters:
+      - in: path
+        name: instance_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: InstanceRecord
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /instances/{instance_id}/console:
+    post:
+      operation_id: createInstanceConsoleSession
+      rbac_scope: scope:instances:console
+      parameters:
+      - in: path
+        name: instance_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: CreateInstanceConsoleSessionRequest
+      responses:
+        '200':
+          schema: InstanceConsoleSession
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /instances/{instance_id}/lifecycle:
+    post:
+      operation_id: applyInstanceLifecycle
+      rbac_scope: scope:instances:update
+      parameters:
+      - in: path
+        name: instance_id
+        required: true
+        schema:
+          type: string
+      request_body_required: true
+      request_schema: InstanceLifecycleRequest
+      responses:
+        '200':
+          schema: InstanceLifecycleResponse
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+        '409':
+          schema: '{}'
+  /instances/{instance_id}/operations:
+    get:
+      operation_id: listInstanceOperations
+      rbac_scope: scope:instances:read
+      parameters:
+      - in: path
+        name: instance_id
+        required: true
+        schema:
+          type: string
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: 'allOf:
+
+            - $ref: ''#/components/schemas/CursorPage''
+
+            - {}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /metering/usage:
+    get:
+      operation_id: ''
+      rbac_scope: ''
+      parameters:
+      - in: query
+        name: start_time
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: end_time
+        required: true
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: resource_type
+        required: false
+        schema:
+          type: string
+      - in: query
+        name: group_by
+        required: false
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: '{}'
+  /networks/load-balancers:
+    get:
+      operation_id: listNetworkLoadBalancers
+      rbac_scope: scope:networks:read
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: NetworkLoadBalancerListResponse
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+    post:
+      operation_id: createNetworkLoadBalancer
+      rbac_scope: scope:networks:create
+      parameters: []
+      request_body_required: true
+      request_schema: CreateNetworkLoadBalancerRequest
+      responses:
+        '201':
+          schema: NetworkLoadBalancer
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /networks/load-balancers/{load_balancer_id}:
+    delete:
+      operation_id: deleteNetworkLoadBalancer
+      rbac_scope: scope:networks:delete
+      parameters:
+      - in: path
+        name: load_balancer_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: NetworkLoadBalancer
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+    get:
+      operation_id: getNetworkLoadBalancer
+      rbac_scope: scope:networks:read
+      parameters:
+      - in: path
+        name: load_balancer_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: NetworkLoadBalancer
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /networks/security-groups:
+    get:
+      operation_id: listNetworkSecurityGroups
+      rbac_scope: scope:networks:read
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: NetworkSecurityGroupListResponse
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+    post:
+      operation_id: createNetworkSecurityGroup
+      rbac_scope: scope:networks:create
+      parameters: []
+      request_body_required: true
+      request_schema: CreateNetworkSecurityGroupRequest
+      responses:
+        '201':
+          schema: NetworkSecurityGroup
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+  /networks/security-groups/{security_group_id}:
+    delete:
+      operation_id: deleteNetworkSecurityGroup
+      rbac_scope: scope:networks:delete
+      parameters:
+      - in: path
+        name: security_group_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: NetworkSecurityGroup
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+    get:
+      operation_id: getNetworkSecurityGroup
+      rbac_scope: scope:networks:read
+      parameters:
+      - in: path
+        name: security_group_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: NetworkSecurityGroup
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /networks/subnets:
+    get:
+      operation_id: listNetworkSubnets
+      rbac_scope: scope:networks:read
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: NetworkSubnetListResponse
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+    post:
+      operation_id: createNetworkSubnet
+      rbac_scope: scope:networks:create
+      parameters: []
+      request_body_required: true
+      request_schema: CreateNetworkSubnetRequest
+      responses:
+        '201':
+          schema: NetworkSubnet
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /networks/subnets/{subnet_id}:
+    delete:
+      operation_id: deleteNetworkSubnet
+      rbac_scope: scope:networks:delete
+      parameters:
+      - in: path
+        name: subnet_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: NetworkSubnet
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+    get:
+      operation_id: getNetworkSubnet
+      rbac_scope: scope:networks:read
+      parameters:
+      - in: path
+        name: subnet_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: NetworkSubnet
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /networks/vpcs:
+    get:
+      operation_id: listNetworkVPCs
+      rbac_scope: scope:networks:read
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: NetworkVPCListResponse
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+    post:
+      operation_id: createNetworkVPC
+      rbac_scope: scope:networks:create
+      parameters: []
+      request_body_required: true
+      request_schema: CreateNetworkVPCRequest
+      responses:
+        '201':
+          schema: NetworkVPC
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+  /networks/vpcs/{vpc_id}:
+    delete:
+      operation_id: deleteNetworkVPC
+      rbac_scope: scope:networks:delete
+      parameters:
+      - in: path
+        name: vpc_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: NetworkVPC
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+    get:
+      operation_id: getNetworkVPC
+      rbac_scope: scope:networks:read
+      parameters:
+      - in: path
+        name: vpc_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: NetworkVPC
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /objects:
+    get:
+      operation_id: listStorageObjects
+      rbac_scope: scope:objects:read
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: StorageObjectListResponse
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+    post:
+      operation_id: createStorageObject
+      rbac_scope: scope:objects:create
+      parameters: []
+      request_body_required: true
+      request_schema: CreateStorageObjectRequest
+      responses:
+        '201':
+          schema: StorageObject
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+  /objects/{object_id}:
+    delete:
+      operation_id: deleteStorageObject
+      rbac_scope: scope:objects:delete
+      parameters:
+      - in: path
+        name: object_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: StorageObject
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+    get:
+      operation_id: getStorageObject
+      rbac_scope: scope:objects:read
+      parameters:
+      - in: path
+        name: object_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: StorageObject
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /readyz:
+    get:
+      operation_id: readiness
+      rbac_scope: ''
+      parameters: []
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: 'type: object'
+        '503':
+          schema: 'type: object'
+  /tasks/{task_id}:
+    get:
+      operation_id: ''
+      rbac_scope: ''
+      parameters:
+      - in: path
+        name: task_id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: AsyncTask
+        '404':
+          schema: '{}'
+  /vector-stores:
+    get:
+      operation_id: listVectorStores
+      rbac_scope: scope:vector-stores:read
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: VectorStoreListResponse
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+    post:
+      operation_id: createVectorStore
+      rbac_scope: scope:vector-stores:create
+      parameters: []
+      request_body_required: true
+      request_schema: CreateVectorStoreRequest
+      responses:
+        '201':
+          schema: VectorStore
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+  /vector-stores/{vector_store_id}:
+    delete:
+      operation_id: deleteVectorStore
+      rbac_scope: scope:vector-stores:delete
+      parameters:
+      - in: path
+        name: vector_store_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: VectorStore
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+    get:
+      operation_id: getVectorStore
+      rbac_scope: scope:vector-stores:read
+      parameters:
+      - in: path
+        name: vector_store_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: VectorStore
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /vector-stores/{vector_store_id}/search:
+    post:
+      operation_id: searchVectorStore
+      rbac_scope: scope:vector-stores:search
+      parameters:
+      - in: path
+        name: vector_store_id
+        required: true
+        schema:
+          type: string
+      request_body_required: true
+      request_schema: VectorStoreSearchRequest
+      responses:
+        '200':
+          schema: VectorStoreSearchResponse
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+  /volumes:
+    get:
+      operation_id: listStorageVolumes
+      rbac_scope: scope:volumes:read
+      parameters:
+      - in: query
+        name: limit
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+      - in: query
+        name: cursor
+        required: false
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: StorageVolumeListResponse
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+    post:
+      operation_id: createStorageVolume
+      rbac_scope: scope:volumes:create
+      parameters: []
+      request_body_required: true
+      request_schema: CreateStorageVolumeRequest
+      responses:
+        '201':
+          schema: StorageVolume
+        '400':
+          schema: '{}'
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+  /volumes/{volume_id}:
+    delete:
+      operation_id: deleteStorageVolume
+      rbac_scope: scope:volumes:delete
+      parameters:
+      - in: path
+        name: volume_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: StorageVolume
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+    get:
+      operation_id: getStorageVolume
+      rbac_scope: scope:volumes:read
+      parameters:
+      - in: path
+        name: volume_id
+        required: true
+        schema:
+          type: string
+      request_body_required: false
+      request_schema: '{}'
+      responses:
+        '200':
+          schema: StorageVolume
+        '401':
+          schema: '{}'
+        '403':
+          schema: '{}'
+        '404':
+          schema: '{}'
+schemas:
+  APIKeyInfo:
+    type: object
+    required:
+    - id
+    - is_active
+    - key_prefix
+    - name
+    - rate_limit_rpm
+    - scopes
+    properties:
+      created_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      expires_at:
+        signature:
+          type: string
+          format: date-time
+          nullable: true
+        enum: []
+      id:
+        signature:
+          type: string
+        enum: []
+      is_active:
+        signature:
+          type: boolean
+        enum: []
+      key_prefix:
+        signature:
+          type: string
+        enum: []
+      last_used_at:
+        signature:
+          type: string
+          format: date-time
+          nullable: true
+        enum: []
+      name:
+        signature:
+          type: string
+        enum: []
+      rate_limit_rpm:
+        signature:
+          type: integer
+        enum: []
+      scopes:
+        signature:
+          type: array
+          items:
+            type: string
+        enum: []
+  AsyncTask:
+    type: object
+    required:
+    - created_at
+    - id
+    - idempotency_key
+    - status
+    - task_type
+    properties:
+      attempt_count:
+        signature:
+          type: integer
+          minimum: 0
+        enum: []
+      completed_at:
+        signature:
+          type: string
+          format: date-time
+          nullable: true
+        enum: []
+      created_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      dead_letter_at:
+        signature:
+          type: string
+          format: date-time
+          nullable: true
+        enum: []
+      error_message:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      id:
+        signature:
+          type: string
+          format: uuid
+        enum: []
+      idempotency_key:
+        signature:
+          type: string
+        enum: []
+      max_attempts:
+        signature:
+          type: integer
+          minimum: 1
+        enum: []
+      progress_pct:
+        signature:
+          type: integer
+          minimum: 0
+          maximum: 100
+        enum: []
+      resource_id:
+        signature:
+          type: string
+          format: uuid
+          nullable: true
+        enum: []
+      resource_type:
+        signature:
+          type: string
+          nullable: true
+        enum:
+        - inference_service
+        - kb_document
+        - model_version
+      result:
+        signature:
+          type: object
+          nullable: true
+        enum: []
+      status:
+        signature:
+          type: string
+        enum:
+        - pending
+        - running
+        - completed
+        - failed
+        - cancelled
+        - dead_letter
+      task_type:
+        signature:
+          type: string
+        enum:
+        - model.import
+        - kb.parse
+        - kb.index
+        - inference.deploy
+  BeginOIDCLoginRequest:
+    type: object
+    required:
+    - redirect_uri
+    - tenant_name
+    properties:
+      redirect_uri:
+        signature:
+          type: string
+          format: uri
+        enum: []
+      tenant_name:
+        signature:
+          type: string
+        enum: []
+  BeginOIDCLoginResponse:
+    type: object
+    required:
+    - authorization_url
+    - state
+    properties:
+      authorization_url:
+        signature:
+          type: string
+          format: uri
+        enum: []
+      state:
+        signature:
+          type: string
+        enum: []
+  CompleteOIDCLoginRequest:
+    type: object
+    required:
+    - code
+    - redirect_uri
+    - state
+    properties:
+      code:
+        signature:
+          type: string
+        enum: []
+      redirect_uri:
+        signature:
+          type: string
+          format: uri
+        enum: []
+      state:
+        signature:
+          type: string
+        enum: []
+  CoreDevProfileInfo:
+    type: object
+    required:
+    - mode
+    - provider
+    - real_provider
+    properties:
+      mode:
+        signature:
+          type: string
+        enum:
+        - local
+        - real
+      provider:
+        signature:
+          type: string
+        enum: []
+      real_provider:
+        signature:
+          type: boolean
+        enum: []
+      reason:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+  CreateAPIKeyRequest:
+    type: object
+    required:
+    - name
+    - scopes
+    properties:
+      expires_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      name:
+        signature:
+          type: string
+          maxLength: 128
+        enum: []
+      rate_limit_rpm:
+        signature:
+          type: integer
+          minimum: 1
+          maximum: 10000
+        enum: []
+      scopes:
+        signature:
+          type: array
+          items:
+            type: string
+            pattern: ^scope:[a-z0-9_-]+:(\*|[a-z0-9_-]+)$
+        enum: []
+      user_id:
+        signature:
+          type: string
+        enum: []
+  CreateAPIKeyResponse:
+    type: object
+    required:
+    - key_id
+    - key_prefix
+    - key_value
+    properties:
+      key_id:
+        signature:
+          type: string
+        enum: []
+      key_prefix:
+        signature:
+          type: string
+        enum: []
+      key_value:
+        signature:
+          type: string
+        enum: []
+  CreateInstanceConsoleSessionRequest:
+    type: object
+    required: []
+    properties:
+      protocol:
+        signature:
+          type: string
+        enum:
+        - console
+        - vnc
+        - novnc
+        - serial
+  CreateInstanceRequest:
+    type: object
+    required:
+    - idempotency_key
+    - kind
+    - name
+    properties:
+      auto_start:
+        signature:
+          type: boolean
+        enum: []
+      boot_image:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      cpu:
+        signature:
+          type: string
+        enum: []
+      gpu:
+        signature:
+          type: object
+          nullable: true
+        enum: []
+      idempotency_key:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      image:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      kind:
+        signature:
+          type: string
+        enum:
+        - vm
+        - container
+        - gpu_container
+      memory:
+        signature:
+          type: string
+        enum: []
+      name:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      replicas:
+        signature:
+          type: integer
+          minimum: 1
+        enum: []
+      ssh_key_ref:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      ssh_username:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      termination_protection:
+        signature:
+          type: boolean
+        enum: []
+  CreateInstanceResponse:
+    type: object
+    required:
+    - instance
+    - operation_id
+    properties:
+      audit_id:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      instance:
+        signature:
+          $ref: '#/components/schemas/InstanceRecord'
+        enum: []
+      operation_id:
+        signature:
+          type: string
+        enum: []
+  CreateNetworkLoadBalancerRequest:
+    type: object
+    required:
+    - idempotency_key
+    - name
+    - vpc_id
+    properties:
+      idempotency_key:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      listeners:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkLoadBalancerListener'
+        enum: []
+      name:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      scheme:
+        signature:
+          type: string
+        enum:
+        - internal
+        - public
+      subnet_id:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      vpc_id:
+        signature:
+          type: string
+        enum: []
+  CreateNetworkSecurityGroupRequest:
+    type: object
+    required:
+    - idempotency_key
+    - name
+    properties:
+      description:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      idempotency_key:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      name:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      rules:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkSecurityGroupRule'
+        enum: []
+  CreateNetworkSubnetRequest:
+    type: object
+    required:
+    - idempotency_key
+    - name
+    - vpc_id
+    properties:
+      cidr:
+        signature:
+          type: string
+        enum: []
+      gateway:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      idempotency_key:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      name:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      vpc_id:
+        signature:
+          type: string
+        enum: []
+  CreateNetworkVPCRequest:
+    type: object
+    required:
+    - idempotency_key
+    - name
+    properties:
+      cidr:
+        signature:
+          type: string
+        enum: []
+      idempotency_key:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      name:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+  CreateStorageFilesystemRequest:
+    type: object
+    required:
+    - idempotency_key
+    - name
+    - size_gib
+    properties:
+      idempotency_key:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      name:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      protocol:
+        signature:
+          type: string
+        enum:
+        - nfs
+        - cephfs
+      size_gib:
+        signature:
+          type: integer
+          format: int64
+          minimum: 1
+        enum: []
+  CreateStorageObjectRequest:
+    type: object
+    required:
+    - bucket
+    - idempotency_key
+    - key
+    properties:
+      bucket:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      content_type:
+        signature:
+          type: string
+        enum: []
+      idempotency_key:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      key:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 1024
+        enum: []
+      size_bytes:
+        signature:
+          type: integer
+          format: int64
+          minimum: 0
+        enum: []
+  CreateStorageVolumeRequest:
+    type: object
+    required:
+    - idempotency_key
+    - name
+    - size_gib
+    properties:
+      idempotency_key:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      name:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      size_gib:
+        signature:
+          type: integer
+          format: int64
+          minimum: 1
+        enum: []
+      storage_class:
+        signature:
+          type: string
+        enum: []
+  CreateVectorStoreRequest:
+    type: object
+    required:
+    - dimension
+    - idempotency_key
+    - name
+    properties:
+      dimension:
+        signature:
+          type: integer
+          minimum: 1
+        enum: []
+      idempotency_key:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      metric:
+        signature:
+          type: string
+        enum:
+        - cosine
+        - l2
+        - ip
+      name:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+  CursorPage:
+    type: object
+    required:
+    - items
+    - total
+    properties:
+      next_cursor:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      total:
+        signature:
+          type: integer
+        enum: []
+  ErrorResponse:
+    type: object
+    required:
+    - code
+    - message
+    - request_id
+    properties:
+      code:
+        signature:
+          type: string
+        enum: []
+      details:
+        signature:
+          type: object
+          additionalProperties: true
+        enum: []
+      message:
+        signature:
+          type: string
+        enum: []
+      request_id:
+        signature:
+          type: string
+        enum: []
+  HealthCheck:
+    type: object
+    required:
+    - checks
+    - status
+    properties:
+      checks:
+        signature:
+          type: object
+          additionalProperties:
+            type: object
+        enum: []
+      status:
+        signature:
+          type: string
+        enum:
+        - ok
+        - degraded
+        - error
+      version:
+        signature:
+          type: string
+        enum: []
+  InstanceConsoleSession:
+    type: object
+    required:
+    - connect_url
+    - expires_at
+    - protocol
+    - session_id
+    - url
+    properties:
+      connect_url:
+        signature:
+          type: string
+        enum: []
+      expires_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      operation_id:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      protocol:
+        signature:
+          type: string
+        enum:
+        - console
+        - vnc
+        - novnc
+        - serial
+      session_id:
+        signature:
+          type: string
+        enum: []
+      url:
+        signature:
+          type: string
+        enum: []
+  InstanceLifecycleRequest:
+    type: object
+    required:
+    - action
+    - idempotency_key
+    properties:
+      action:
+        signature:
+          type: string
+        enum:
+        - start
+        - stop
+        - restart
+        - resize
+        - rebuild
+        - delete
+        - snapshot
+        - attach_volume
+        - detach_volume
+        - rollback
+      cpu:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      idempotency_key:
+        signature:
+          type: string
+          minLength: 1
+          maxLength: 128
+        enum: []
+      memory:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      revision:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      snapshot_name:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      volume_id:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+  InstanceLifecycleResponse:
+    type: object
+    required:
+    - instance
+    - operation_id
+    properties:
+      instance:
+        signature:
+          $ref: '#/components/schemas/InstanceRecord'
+        enum: []
+      operation_id:
+        signature:
+          type: string
+        enum: []
+  InstanceListResponse:
+    type: object
+    required:
+    - items
+    - total
+    properties:
+      items:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/InstanceRecord'
+        enum: []
+      next_cursor:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      total:
+        signature:
+          type: integer
+        enum: []
+  InstanceOperation:
+    type: object
+    required:
+    - created_at
+    - id
+    - instance_id
+    - operation
+    - requested_by
+    - status
+    - tenant_id
+    properties:
+      after_spec:
+        signature:
+          type: object
+          nullable: true
+        enum: []
+      before_spec:
+        signature:
+          type: object
+          nullable: true
+        enum: []
+      created_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      failure_message:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      failure_reason:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      id:
+        signature:
+          type: string
+        enum: []
+      idempotency_key:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      instance_id:
+        signature:
+          type: string
+        enum: []
+      operation:
+        signature:
+          type: string
+        enum:
+        - create
+        - start
+        - stop
+        - restart
+        - resize
+        - rebuild
+        - delete
+        - snapshot
+        - attach_volume
+        - detach_volume
+        - rollback
+        - console_session
+      precheck_result:
+        signature:
+          type: object
+          nullable: true
+        enum: []
+      requested_by:
+        signature:
+          type: string
+        enum: []
+      retry_eligible:
+        signature:
+          type: boolean
+        enum: []
+      status:
+        signature:
+          type: string
+        enum:
+        - accepted
+        - in_progress
+        - succeeded
+        - failed
+        - cancelled
+      steps:
+        signature:
+          type: array
+          items:
+            type: object
+        enum: []
+      tenant_id:
+        signature:
+          type: string
+        enum: []
+      updated_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+  InstanceRecord:
+    type: object
+    required:
+    - created_at
+    - id
+    - kind
+    - name
+    - provider
+    - state
+    - tenant_id
+    - updated_at
+    properties:
+      audit_id:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      container:
+        signature:
+          type: object
+          nullable: true
+        enum: []
+      created_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      dev_profile:
+        signature:
+          $ref: '#/components/schemas/CoreDevProfileInfo'
+        enum: []
+      endpoint:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      gpu:
+        signature:
+          type: object
+          nullable: true
+        enum: []
+      id:
+        signature:
+          type: string
+        enum: []
+      kind:
+        signature:
+          type: string
+        enum:
+        - vm
+        - container
+        - gpu_container
+        - sandbox
+        - batch_job
+        - notebook
+        - k8s_cluster
+        - bare_metal
+        - dpu_node
+      name:
+        signature:
+          type: string
+        enum: []
+      node_name:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      provider:
+        signature:
+          type: string
+        enum: []
+      resource_refs:
+        signature:
+          type: array
+          items:
+            type: string
+        enum: []
+      snapshots:
+        signature:
+          type: array
+          items:
+            type: object
+        enum: []
+      ssh:
+        signature:
+          type: object
+          nullable: true
+        enum: []
+      state:
+        signature:
+          type: string
+        enum:
+        - pending
+        - provisioning
+        - starting
+        - running
+        - stopping
+        - stopped
+        - failed
+        - deleting
+        - deleted
+      state_message:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      state_reason:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      tenant_id:
+        signature:
+          type: string
+        enum: []
+      termination_protection:
+        signature:
+          type: boolean
+        enum: []
+      updated_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      volumes:
+        signature:
+          type: array
+          items:
+            type: object
+        enum: []
+      workload_identity:
+        signature:
+          $ref: '#/components/schemas/WorkloadIdentityBinding'
+        enum: []
+  ListAPIKeysResponse:
+    type: object
+    required:
+    - items
+    - total
+    properties:
+      items:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/APIKeyInfo'
+        enum: []
+      total:
+        signature:
+          type: integer
+        enum: []
+  LogoutRequest:
+    type: object
+    required:
+    - jti
+    properties:
+      jti:
+        signature:
+          type: string
+        enum: []
+  NetworkLoadBalancer:
+    type: object
+    required:
+    - created_at
+    - id
+    - listeners
+    - name
+    - scheme
+    - state
+    - tenant_id
+    - updated_at
+    - vpc_id
+    properties:
+      created_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      dev_profile:
+        signature:
+          $ref: '#/components/schemas/CoreDevProfileInfo'
+        enum: []
+      id:
+        signature:
+          type: string
+        enum: []
+      listeners:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkLoadBalancerListener'
+        enum: []
+      name:
+        signature:
+          type: string
+        enum: []
+      reason:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      scheme:
+        signature:
+          type: string
+        enum:
+        - internal
+        - public
+      state:
+        signature:
+          $ref: '#/components/schemas/NetworkResourceState'
+        enum: []
+      subnet_id:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      tenant_id:
+        signature:
+          type: string
+        enum: []
+      updated_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      vip:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      vpc_id:
+        signature:
+          type: string
+        enum: []
+  NetworkLoadBalancerListResponse:
+    type: object
+    required:
+    - items
+    - total
+    properties:
+      items:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkLoadBalancer'
+        enum: []
+      next_cursor:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      total:
+        signature:
+          type: integer
+        enum: []
+  NetworkLoadBalancerListener:
+    type: object
+    required:
+    - port
+    - protocol
+    - target_port
+    properties:
+      port:
+        signature:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        enum: []
+      protocol:
+        signature:
+          type: string
+        enum:
+        - http
+        - https
+        - tcp
+      target_port:
+        signature:
+          type: integer
+          minimum: 1
+          maximum: 65535
+        enum: []
+  NetworkResourceState:
+    type: string
+    required: []
+    properties: {}
+  NetworkSecurityGroup:
+    type: object
+    required:
+    - created_at
+    - id
+    - name
+    - rules
+    - state
+    - tenant_id
+    - updated_at
+    properties:
+      created_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      description:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      dev_profile:
+        signature:
+          $ref: '#/components/schemas/CoreDevProfileInfo'
+        enum: []
+      id:
+        signature:
+          type: string
+        enum: []
+      name:
+        signature:
+          type: string
+        enum: []
+      reason:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      rules:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkSecurityGroupRule'
+        enum: []
+      state:
+        signature:
+          $ref: '#/components/schemas/NetworkResourceState'
+        enum: []
+      tenant_id:
+        signature:
+          type: string
+        enum: []
+      updated_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+  NetworkSecurityGroupListResponse:
+    type: object
+    required:
+    - items
+    - total
+    properties:
+      items:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkSecurityGroup'
+        enum: []
+      next_cursor:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      total:
+        signature:
+          type: integer
+        enum: []
+  NetworkSecurityGroupRule:
+    type: object
+    required:
+    - action
+    - cidr
+    - direction
+    - port_range
+    - protocol
+    properties:
+      action:
+        signature:
+          type: string
+        enum:
+        - allow
+        - deny
+      cidr:
+        signature:
+          type: string
+        enum: []
+      direction:
+        signature:
+          type: string
+        enum:
+        - ingress
+        - egress
+      port_range:
+        signature:
+          type: string
+        enum: []
+      protocol:
+        signature:
+          type: string
+        enum:
+        - tcp
+        - udp
+        - icmp
+        - all
+  NetworkSubnet:
+    type: object
+    required:
+    - cidr
+    - created_at
+    - id
+    - name
+    - state
+    - tenant_id
+    - updated_at
+    - vpc_id
+    properties:
+      cidr:
+        signature:
+          type: string
+        enum: []
+      created_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      dev_profile:
+        signature:
+          $ref: '#/components/schemas/CoreDevProfileInfo'
+        enum: []
+      gateway:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      id:
+        signature:
+          type: string
+        enum: []
+      name:
+        signature:
+          type: string
+        enum: []
+      reason:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      state:
+        signature:
+          $ref: '#/components/schemas/NetworkResourceState'
+        enum: []
+      tenant_id:
+        signature:
+          type: string
+        enum: []
+      updated_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      vpc_id:
+        signature:
+          type: string
+        enum: []
+  NetworkSubnetListResponse:
+    type: object
+    required:
+    - items
+    - total
+    properties:
+      items:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkSubnet'
+        enum: []
+      next_cursor:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      total:
+        signature:
+          type: integer
+        enum: []
+  NetworkVPC:
+    type: object
+    required:
+    - cidr
+    - created_at
+    - id
+    - name
+    - state
+    - tenant_id
+    - updated_at
+    properties:
+      cidr:
+        signature:
+          type: string
+        enum: []
+      created_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      dev_profile:
+        signature:
+          $ref: '#/components/schemas/CoreDevProfileInfo'
+        enum: []
+      id:
+        signature:
+          type: string
+        enum: []
+      name:
+        signature:
+          type: string
+        enum: []
+      reason:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      state:
+        signature:
+          $ref: '#/components/schemas/NetworkResourceState'
+        enum: []
+      tenant_id:
+        signature:
+          type: string
+        enum: []
+      updated_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+  NetworkVPCListResponse:
+    type: object
+    required:
+    - items
+    - total
+    properties:
+      items:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkVPC'
+        enum: []
+      next_cursor:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      total:
+        signature:
+          type: integer
+        enum: []
+  RefreshAccessTokenRequest:
+    type: object
+    required:
+    - refresh_token
+    properties:
+      refresh_token:
+        signature:
+          type: string
+        enum: []
+  RefreshAccessTokenResponse:
+    type: object
+    required:
+    - access_token
+    - expires_in
+    properties:
+      access_token:
+        signature:
+          type: string
+        enum: []
+      expires_in:
+        signature:
+          type: integer
+        enum: []
+  RevokeStatusResponse:
+    type: object
+    required:
+    - status
+    properties:
+      status:
+        signature:
+          type: string
+        enum:
+        - revoked
+  StorageFilesystem:
+    type: object
+    required:
+    - created_at
+    - id
+    - name
+    - protocol
+    - size_gib
+    - state
+    - tenant_id
+    - updated_at
+    properties:
+      created_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      dev_profile:
+        signature:
+          $ref: '#/components/schemas/CoreDevProfileInfo'
+        enum: []
+      endpoint:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      id:
+        signature:
+          type: string
+        enum: []
+      name:
+        signature:
+          type: string
+        enum: []
+      protocol:
+        signature:
+          type: string
+        enum:
+        - nfs
+        - cephfs
+      reason:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      size_gib:
+        signature:
+          type: integer
+          format: int64
+          minimum: 1
+        enum: []
+      state:
+        signature:
+          $ref: '#/components/schemas/StorageResourceState'
+        enum: []
+      tenant_id:
+        signature:
+          type: string
+        enum: []
+      updated_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+  StorageFilesystemListResponse:
+    type: object
+    required:
+    - items
+    - total
+    properties:
+      items:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorageFilesystem'
+        enum: []
+      next_cursor:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      total:
+        signature:
+          type: integer
+        enum: []
+  StorageObject:
+    type: object
+    required:
+    - bucket
+    - content_type
+    - created_at
+    - id
+    - key
+    - size_bytes
+    - state
+    - tenant_id
+    - updated_at
+    properties:
+      bucket:
+        signature:
+          type: string
+        enum: []
+      content_type:
+        signature:
+          type: string
+        enum: []
+      created_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      dev_profile:
+        signature:
+          $ref: '#/components/schemas/CoreDevProfileInfo'
+        enum: []
+      id:
+        signature:
+          type: string
+        enum: []
+      key:
+        signature:
+          type: string
+        enum: []
+      reason:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      size_bytes:
+        signature:
+          type: integer
+          format: int64
+          minimum: 0
+        enum: []
+      state:
+        signature:
+          $ref: '#/components/schemas/StorageResourceState'
+        enum: []
+      tenant_id:
+        signature:
+          type: string
+        enum: []
+      updated_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+  StorageObjectListResponse:
+    type: object
+    required:
+    - items
+    - total
+    properties:
+      items:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorageObject'
+        enum: []
+      next_cursor:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      total:
+        signature:
+          type: integer
+        enum: []
+  StorageResourceState:
+    type: string
+    required: []
+    properties: {}
+  StorageVolume:
+    type: object
+    required:
+    - created_at
+    - id
+    - name
+    - size_gib
+    - state
+    - storage_class
+    - tenant_id
+    - updated_at
+    properties:
+      created_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      dev_profile:
+        signature:
+          $ref: '#/components/schemas/CoreDevProfileInfo'
+        enum: []
+      id:
+        signature:
+          type: string
+        enum: []
+      name:
+        signature:
+          type: string
+        enum: []
+      reason:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      size_gib:
+        signature:
+          type: integer
+          format: int64
+          minimum: 1
+        enum: []
+      state:
+        signature:
+          $ref: '#/components/schemas/StorageResourceState'
+        enum: []
+      storage_class:
+        signature:
+          type: string
+        enum: []
+      tenant_id:
+        signature:
+          type: string
+        enum: []
+      updated_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+  StorageVolumeListResponse:
+    type: object
+    required:
+    - items
+    - total
+    properties:
+      items:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/StorageVolume'
+        enum: []
+      next_cursor:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      total:
+        signature:
+          type: integer
+        enum: []
+  TokenPairResponse:
+    type: object
+    required:
+    - access_token
+    - expires_in
+    - refresh_token
+    properties:
+      access_token:
+        signature:
+          type: string
+        enum: []
+      expires_in:
+        signature:
+          type: integer
+        enum: []
+      issued_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      refresh_token:
+        signature:
+          type: string
+        enum: []
+  VectorStore:
+    type: object
+    required:
+    - created_at
+    - dimension
+    - id
+    - metric
+    - name
+    - state
+    - tenant_id
+    - updated_at
+    properties:
+      created_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+      dev_profile:
+        signature:
+          $ref: '#/components/schemas/CoreDevProfileInfo'
+        enum: []
+      dimension:
+        signature:
+          type: integer
+          minimum: 1
+        enum: []
+      id:
+        signature:
+          type: string
+        enum: []
+      metric:
+        signature:
+          type: string
+        enum:
+        - cosine
+        - l2
+        - ip
+      name:
+        signature:
+          type: string
+        enum: []
+      reason:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      state:
+        signature:
+          $ref: '#/components/schemas/VectorStoreState'
+        enum: []
+      tenant_id:
+        signature:
+          type: string
+        enum: []
+      updated_at:
+        signature:
+          type: string
+          format: date-time
+        enum: []
+  VectorStoreListResponse:
+    type: object
+    required:
+    - items
+    - total
+    properties:
+      items:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/VectorStore'
+        enum: []
+      next_cursor:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      total:
+        signature:
+          type: integer
+        enum: []
+  VectorStoreSearchHit:
+    type: object
+    required:
+    - id
+    - metadata
+    - score
+    properties:
+      id:
+        signature:
+          type: string
+        enum: []
+      metadata:
+        signature:
+          type: object
+          additionalProperties:
+            type: string
+        enum: []
+      score:
+        signature:
+          type: number
+          format: float
+        enum: []
+  VectorStoreSearchRequest:
+    type: object
+    required:
+    - vector
+    properties:
+      filter:
+        signature:
+          type: object
+          additionalProperties:
+            type: string
+        enum: []
+      top_k:
+        signature:
+          type: integer
+          minimum: 1
+          maximum: 100
+        enum: []
+      vector:
+        signature:
+          type: array
+          items:
+            type: number
+            format: float
+        enum: []
+  VectorStoreSearchResponse:
+    type: object
+    required:
+    - items
+    - total
+    properties:
+      items:
+        signature:
+          type: array
+          items:
+            $ref: '#/components/schemas/VectorStoreSearchHit'
+        enum: []
+      total:
+        signature:
+          type: integer
+        enum: []
+  VectorStoreState:
+    type: string
+    required: []
+    properties: {}
+  WorkloadIdentityBinding:
+    type: object
+    required:
+    - active
+    properties:
+      active:
+        signature:
+          type: boolean
+        enum: []
+      created_at:
+        signature:
+          type: string
+          format: date-time
+          nullable: true
+        enum: []
+      key_id:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      key_prefix:
+        signature:
+          type: string
+          nullable: true
+        enum: []
+      revoked_at:
+        signature:
+          type: string
+          format: date-time
+          nullable: true
+        enum: []
+      scopes:
+        signature:
+          type: array
+          items:
+            type: string
+            pattern: ^scope:[a-z0-9_-]+:(\*|[a-z0-9_-]+)$
+        enum: []

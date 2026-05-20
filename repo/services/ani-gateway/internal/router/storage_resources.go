@@ -16,22 +16,25 @@ type storageAPI struct {
 }
 
 type storageCreateVolumeRequest struct {
-	Name         string `json:"name"`
-	SizeGiB      int64  `json:"size_gib"`
-	StorageClass string `json:"storage_class"`
+	IdempotencyKey string `json:"idempotency_key"`
+	Name           string `json:"name"`
+	SizeGiB        int64  `json:"size_gib"`
+	StorageClass   string `json:"storage_class"`
 }
 
 type storageCreateFilesystemRequest struct {
-	Name     string `json:"name"`
-	Protocol string `json:"protocol"`
-	SizeGiB  int64  `json:"size_gib"`
+	IdempotencyKey string `json:"idempotency_key"`
+	Name           string `json:"name"`
+	Protocol       string `json:"protocol"`
+	SizeGiB        int64  `json:"size_gib"`
 }
 
 type storageCreateObjectRequest struct {
-	Bucket      string `json:"bucket"`
-	Key         string `json:"key"`
-	SizeBytes   int64  `json:"size_bytes"`
-	ContentType string `json:"content_type"`
+	IdempotencyKey string `json:"idempotency_key"`
+	Bucket         string `json:"bucket"`
+	Key            string `json:"key"`
+	SizeBytes      int64  `json:"size_bytes"`
+	ContentType    string `json:"content_type"`
 }
 
 type storageVolumeResponse struct {
@@ -104,10 +107,11 @@ func (api *storageAPI) createVolume(ctx context.Context, c *app.RequestContext) 
 		return
 	}
 	record, err := api.service.CreateVolume(ctx, ports.StorageVolumeCreateRequest{
-		TenantID:     demoTenantID(c),
-		Name:         req.Name,
-		SizeGiB:      req.SizeGiB,
-		StorageClass: req.StorageClass,
+		TenantID:       demoTenantID(c),
+		IdempotencyKey: req.IdempotencyKey,
+		Name:           req.Name,
+		SizeGiB:        req.SizeGiB,
+		StorageClass:   req.StorageClass,
 	})
 	if err != nil {
 		writeStorageError(c, err)
@@ -126,7 +130,7 @@ func (api *storageAPI) listVolumes(ctx context.Context, c *app.RequestContext) {
 	for _, record := range records {
 		items = append(items, storageVolumeFromRecord(record))
 	}
-	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items)})
+	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items), "next_cursor": nil})
 }
 
 func (api *storageAPI) getVolume(ctx context.Context, c *app.RequestContext) {
@@ -154,10 +158,11 @@ func (api *storageAPI) createFilesystem(ctx context.Context, c *app.RequestConte
 		return
 	}
 	record, err := api.service.CreateFilesystem(ctx, ports.StorageFilesystemCreateRequest{
-		TenantID: demoTenantID(c),
-		Name:     req.Name,
-		Protocol: req.Protocol,
-		SizeGiB:  req.SizeGiB,
+		TenantID:       demoTenantID(c),
+		IdempotencyKey: req.IdempotencyKey,
+		Name:           req.Name,
+		Protocol:       req.Protocol,
+		SizeGiB:        req.SizeGiB,
 	})
 	if err != nil {
 		writeStorageError(c, err)
@@ -176,7 +181,7 @@ func (api *storageAPI) listFilesystems(ctx context.Context, c *app.RequestContex
 	for _, record := range records {
 		items = append(items, storageFilesystemFromRecord(record))
 	}
-	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items)})
+	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items), "next_cursor": nil})
 }
 
 func (api *storageAPI) getFilesystem(ctx context.Context, c *app.RequestContext) {
@@ -204,11 +209,12 @@ func (api *storageAPI) createObject(ctx context.Context, c *app.RequestContext) 
 		return
 	}
 	record, err := api.service.CreateObject(ctx, ports.StorageObjectCreateRequest{
-		TenantID:    demoTenantID(c),
-		Bucket:      req.Bucket,
-		Key:         req.Key,
-		SizeBytes:   req.SizeBytes,
-		ContentType: req.ContentType,
+		TenantID:       demoTenantID(c),
+		IdempotencyKey: req.IdempotencyKey,
+		Bucket:         req.Bucket,
+		Key:            req.Key,
+		SizeBytes:      req.SizeBytes,
+		ContentType:    req.ContentType,
 	})
 	if err != nil {
 		writeStorageError(c, err)
@@ -227,7 +233,7 @@ func (api *storageAPI) listObjects(ctx context.Context, c *app.RequestContext) {
 	for _, record := range records {
 		items = append(items, storageObjectFromRecord(record))
 	}
-	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items)})
+	c.JSON(http.StatusOK, map[string]any{"items": items, "total": len(items), "next_cursor": nil})
 }
 
 func (api *storageAPI) getObject(ctx context.Context, c *app.RequestContext) {

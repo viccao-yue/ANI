@@ -96,8 +96,9 @@ func TestLocalNetworkServicePersistsCreateAndDelete(t *testing.T) {
 	)
 
 	vpc, err := service.CreateVPC(context.Background(), ports.NetworkVPCCreateRequest{
-		TenantID: networkStoreTenantID,
-		Name:     "persisted-vpc",
+		TenantID:       networkStoreTenantID,
+		IdempotencyKey: "persisted-vpc",
+		Name:           "persisted-vpc",
 	})
 	if err != nil {
 		t.Fatalf("CreateVPC() error = %v", err)

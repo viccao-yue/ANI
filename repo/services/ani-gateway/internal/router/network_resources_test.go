@@ -10,9 +10,10 @@ import (
 func TestNetworkAPIDevProfileVPCSubnetSecurityGroupAndLB(t *testing.T) {
 	api := newNetworkAPI()
 	vpc, err := api.service.CreateVPC(context.Background(), ports.NetworkVPCCreateRequest{
-		TenantID: "tenant-a",
-		Name:     "tenant-a-vpc",
-		CIDR:     "10.30.0.0/16",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "api-vpc-a",
+		Name:           "tenant-a-vpc",
+		CIDR:           "10.30.0.0/16",
 	})
 	if err != nil {
 		t.Fatalf("CreateVPC error = %v", err)
@@ -23,10 +24,11 @@ func TestNetworkAPIDevProfileVPCSubnetSecurityGroupAndLB(t *testing.T) {
 		requireLocalCoreDevProfile(t, got.DevProfile, "local-network-service")
 	}
 	subnet, err := api.service.CreateSubnet(context.Background(), ports.NetworkSubnetCreateRequest{
-		TenantID: "tenant-a",
-		VPCID:    vpc.VPCID,
-		Name:     "tenant-a-subnet",
-		CIDR:     "10.30.1.0/24",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "api-subnet-a",
+		VPCID:          vpc.VPCID,
+		Name:           "tenant-a-subnet",
+		CIDR:           "10.30.1.0/24",
 	})
 	if err != nil {
 		t.Fatalf("CreateSubnet error = %v", err)
@@ -37,8 +39,9 @@ func TestNetworkAPIDevProfileVPCSubnetSecurityGroupAndLB(t *testing.T) {
 		requireLocalCoreDevProfile(t, got.DevProfile, "local-network-service")
 	}
 	sg, err := api.service.CreateSecurityGroup(context.Background(), ports.NetworkSecurityGroupCreateRequest{
-		TenantID: "tenant-a",
-		Name:     "web-sg",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "api-sg-a",
+		Name:           "web-sg",
 		Rules: []ports.NetworkSecurityGroupRule{
 			{Direction: "ingress", Protocol: "tcp", PortRange: "443", CIDR: "0.0.0.0/0", Action: "allow"},
 		},
@@ -52,9 +55,10 @@ func TestNetworkAPIDevProfileVPCSubnetSecurityGroupAndLB(t *testing.T) {
 		requireLocalCoreDevProfile(t, got.DevProfile, "local-network-service")
 	}
 	lb, err := api.service.CreateLoadBalancer(context.Background(), ports.NetworkLoadBalancerCreateRequest{
-		TenantID: "tenant-a",
-		Name:     "web-lb",
-		VPCID:    vpc.VPCID,
+		TenantID:       "tenant-a",
+		IdempotencyKey: "api-lb-a",
+		Name:           "web-lb",
+		VPCID:          vpc.VPCID,
 		Listeners: []ports.NetworkLoadBalancerListener{
 			{Protocol: "http", Port: 80, TargetPort: 8080},
 		},
@@ -72,8 +76,9 @@ func TestNetworkAPIDevProfileVPCSubnetSecurityGroupAndLB(t *testing.T) {
 func TestNetworkAPIServiceKeepsTenantIsolation(t *testing.T) {
 	api := newNetworkAPI()
 	vpc, err := api.service.CreateVPC(context.Background(), ports.NetworkVPCCreateRequest{
-		TenantID: "tenant-a",
-		Name:     "tenant-a-vpc",
+		TenantID:       "tenant-a",
+		IdempotencyKey: "api-vpc-b",
+		Name:           "tenant-a-vpc",
 	})
 	if err != nil {
 		t.Fatalf("CreateVPC error = %v", err)

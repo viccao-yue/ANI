@@ -20,6 +20,24 @@ LAYERS = {
 }
 
 HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
+KNOWN_ERROR_CODES = {
+    "UNAUTHORIZED",
+    "FORBIDDEN",
+    "NOT_FOUND",
+    "CONFLICT",
+    "BAD_REQUEST",
+    "RATE_LIMIT_EXCEEDED",
+    "NOT_IMPLEMENTED",
+    "INTERNAL_ERROR",
+}
+RESPONSE_ERROR_CODES = {
+    "Unauthorized": "UNAUTHORIZED",
+    "Forbidden": "FORBIDDEN",
+    "NotFound": "NOT_FOUND",
+    "BadRequest": "BAD_REQUEST",
+    "Conflict": "CONFLICT",
+    "RateLimitExceeded": "RATE_LIMIT_EXCEEDED",
+}
 
 
 def operation_id(method: str, path: str) -> str:
@@ -34,22 +52,30 @@ def load_yaml(path: Path) -> dict[str, Any]:
 
 def expected_metadata(root: Path, layer: str, spec_path: str) -> dict[str, Any]:
     spec = load_yaml(root / spec_path)
+    schemas = spec.get("components", {}).get("schemas", {})
     operations: list[dict[str, str]] = []
+    idempotency_operations: list[str] = []
+    cursor_pagination_operations: list[str] = []
     for path, path_item in sorted(spec.get("paths", {}).items()):
         if not isinstance(path_item, dict):
             continue
         for method, operation in sorted(path_item.items()):
             if method not in HTTP_METHODS or not isinstance(operation, dict):
                 continue
+            op_id = operation.get("operationId") or operation_id(method, path)
             operations.append(
                 {
-                    "operationId": operation.get("operationId") or operation_id(method, path),
+                    "operationId": op_id,
                     "method": method.upper(),
                     "path": path,
                     "scope": operation.get("x-ani-rbac-scope", ""),
                 }
             )
-    schemas = sorted(spec.get("components", {}).get("schemas", {}).keys())
+            if method in {"post", "put", "patch"} and request_schema_requires_idempotency(operation, schemas):
+                idempotency_operations.append(op_id)
+            if method == "get" and operation_has_cursor_pagination(operation):
+                cursor_pagination_operations.append(op_id)
+    schema_names = sorted(schemas.keys())
     servers = spec.get("servers") or []
     server_url = servers[0].get("url", "") if servers else ""
     return {
@@ -58,8 +84,43 @@ def expected_metadata(root: Path, layer: str, spec_path: str) -> dict[str, Any]:
         "version": spec.get("info", {}).get("version", ""),
         "serverURL": server_url,
         "operations": operations,
-        "schemas": schemas,
+        "schemas": schema_names,
+        "idempotencyOperations": idempotency_operations,
+        "cursorPaginationOperations": cursor_pagination_operations,
+        "errorCodes": collect_error_codes(spec),
     }
+
+
+def request_schema_requires_idempotency(operation: dict[str, Any], schemas: dict[str, Any]) -> bool:
+    content = operation.get("requestBody", {}).get("content", {}).get("application/json", {})
+    schema = content.get("schema", {})
+    ref = schema.get("$ref", "")
+    if not ref:
+        return False
+    schema_name = ref.rsplit("/", 1)[-1]
+    return "idempotency_key" in set(schemas.get(schema_name, {}).get("required", []))
+
+
+def operation_has_cursor_pagination(operation: dict[str, Any]) -> bool:
+    parameter_names = {parameter.get("name") for parameter in operation.get("parameters", []) if isinstance(parameter, dict)}
+    return {"limit", "cursor"}.issubset(parameter_names)
+
+
+def collect_error_codes(spec: dict[str, Any]) -> list[str]:
+    codes: set[str] = set()
+    description = spec.get("info", {}).get("description", "")
+    for code in KNOWN_ERROR_CODES:
+        if code in description:
+            codes.add(code)
+    for name, response in spec.get("components", {}).get("responses", {}).items():
+        mapped = RESPONSE_ERROR_CODES.get(name)
+        if mapped:
+            codes.add(mapped)
+        if isinstance(response, dict):
+            match = re.search(r"code=([A-Z0-9_]+)", response.get("description", ""))
+            if match:
+                codes.add(match.group(1))
+    return sorted(codes)
 
 
 def run(cmd: list[str], cwd: Path, env: dict[str, str] | None = None) -> None:
@@ -84,7 +145,7 @@ def validate_metadata(root: Path, layer: str, spec_path: str, errors: list[str])
         return
     actual = json.loads(metadata_path.read_text(encoding="utf-8"))
     expected = expected_metadata(root, layer, spec_path)
-    for key in ("layer", "title", "version", "serverURL", "schemas"):
+    for key in ("layer", "title", "version", "serverURL", "schemas", "idempotencyOperations", "cursorPaginationOperations", "errorCodes"):
         if actual.get(key) != expected.get(key):
             errors.append(f"{layer} SDK metadata {key} is out of date")
     actual_ops = [item.get("operationId") for item in actual.get("operations", [])]
@@ -109,18 +170,45 @@ def validate_files(root: Path, errors: list[str]) -> None:
         "go/go.mod",
         "go/anisdk/client.go",
         "go/anisdk/client_test.go",
+        "go/examples/basic/main.go",
         "python/smoke.py",
+        "python/examples/basic.py",
         "typescript/src/index.ts",
         "typescript/src/index.mjs",
         "typescript/smoke.mjs",
+        "typescript/examples/basic.mjs",
         "java/src/main/java",
         "java/src/test/java",
+        "java/examples/Basic.java",
     ]
     for layer in LAYERS:
         for suffix in required:
             path = root / "sdks" / layer / suffix
             if not path.exists():
                 errors.append(f"missing {path.relative_to(root)}")
+
+
+def validate_idempotency_helpers(root: Path, errors: list[str]) -> None:
+    required_tokens = {
+        "go/anisdk/client.go": ["NewIdempotencyKey", "WithIdempotencyKey", "IdempotencyOperations", "CursorParams", "CursorPaginationOperations", "APIError", "ErrorCodes", "IsAPIErrorCode"],
+        "python/kubercloud_ani_core/client.py": ["new_idempotency_key", "with_idempotency_key", "IDEMPOTENCY_OPERATIONS", "cursor_params", "CURSOR_PAGINATION_OPERATIONS", "APIError", "ERROR_CODES", "is_api_error_code"],
+        "typescript/src/index.ts": ["newIdempotencyKey", "withIdempotencyKey", "idempotencyOperations", "cursorParams", "cursorPaginationOperations", "APIError", "errorCodes", "isAPIErrorCode"],
+        "java/src/main/java/com/kubercloud/ani/core/ApiClient.java": ["newIdempotencyKey", "withIdempotencyKey", "IDEMPOTENCY_OPERATIONS", "cursorParams", "CURSOR_PAGINATION_OPERATIONS", "APIError", "ERROR_CODES", "isAPIErrorCode"],
+    }
+    services_required_tokens = {
+        key.replace("kubercloud_ani_core", "kubercloud_ani_services").replace("com/kubercloud/ani/core", "com/kubercloud/ani/services"): value
+        for key, value in required_tokens.items()
+    }
+    for layer, tokens_by_path in {"core": required_tokens, "services": services_required_tokens}.items():
+        for suffix, tokens in tokens_by_path.items():
+            path = root / "sdks" / layer / suffix
+            if not path.exists():
+                errors.append(f"missing {path.relative_to(root)}")
+                continue
+            content = path.read_text(encoding="utf-8")
+            for token in tokens:
+                if token not in content:
+                    errors.append(f"{path.relative_to(root)} missing SDK helper token {token}")
 
 
 def run_smoke(root: Path) -> None:
@@ -133,15 +221,20 @@ def run_smoke(root: Path) -> None:
         base = root / "sdks" / layer
         run(["go", "test", "./..."], base / "go", go_env)
         run(["python", "smoke.py"], base / "python")
+        run(["python", "examples/basic.py"], base / "python", {"PYTHONPATH": str(base / "python")})
         run(["node", "--check", "src/index.mjs"], base / "typescript")
         run(["node", "smoke.mjs"], base / "typescript")
+        run(["node", "examples/basic.mjs"], base / "typescript")
         java_files = sorted(str(path.relative_to(base / "java")) for path in (base / "java").glob("src/**/*.java"))
+        java_example_files = sorted(str(path.relative_to(base / "java")) for path in (base / "java").glob("examples/**/*.java"))
         classes = base / "java" / "build" / "classes"
         classes.mkdir(parents=True, exist_ok=True)
         if command_available(["javac", "-version"], base / "java") and command_available(["java", "-version"], base / "java"):
             run(["javac", "-d", str(classes), *java_files], base / "java")
             package = "com.kubercloud.ani.core" if layer == "core" else "com.kubercloud.ani.services"
             run(["java", "-cp", str(classes), package + ".Smoke"], base / "java")
+            run(["javac", "-cp", str(classes), "-d", str(classes), *java_example_files], base / "java")
+            run(["java", "-cp", str(classes), "Basic"], base / "java")
         else:
             validate_java_sources(base / "java", layer)
             print(f"{layer} java SDK alpha source smoke ok (JDK unavailable for compile smoke)")
@@ -152,12 +245,16 @@ def validate_java_sources(java_root: Path, layer: str) -> None:
     package_path = Path(*package.split("."))
     client = java_root / "src/main/java" / package_path / "ApiClient.java"
     smoke = java_root / "src/test/java" / package_path / "Smoke.java"
+    example = java_root / "examples/Basic.java"
     for path in (client, smoke):
         content = path.read_text(encoding="utf-8")
         if f"package {package};" not in content:
             raise SystemExit(f"SDK alpha smoke failed: {path} has wrong package")
         if "class " not in content or "{" not in content or "}" not in content:
             raise SystemExit(f"SDK alpha smoke failed: {path} does not look like Java source")
+    example_content = example.read_text(encoding="utf-8")
+    if f"import {package}.ApiClient;" not in example_content or "class Basic" not in example_content:
+        raise SystemExit(f"SDK alpha smoke failed: {example} does not look like Java example source")
 
 
 def main() -> None:
@@ -168,6 +265,7 @@ def main() -> None:
     if not errors:
         validate_separation(root, errors)
     validate_files(root, errors)
+    validate_idempotency_helpers(root, errors)
     if errors:
         for error in errors:
             print(f"sdk alpha error: {error}", file=sys.stderr)

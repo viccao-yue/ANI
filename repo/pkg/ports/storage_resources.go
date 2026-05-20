@@ -54,25 +54,28 @@ type StorageObjectRecord struct {
 }
 
 type StorageVolumeCreateRequest struct {
-	TenantID     string
-	Name         string
-	SizeGiB      int64
-	StorageClass string
+	TenantID       string
+	IdempotencyKey string
+	Name           string
+	SizeGiB        int64
+	StorageClass   string
 }
 
 type StorageFilesystemCreateRequest struct {
-	TenantID string
-	Name     string
-	Protocol string
-	SizeGiB  int64
+	TenantID       string
+	IdempotencyKey string
+	Name           string
+	Protocol       string
+	SizeGiB        int64
 }
 
 type StorageObjectCreateRequest struct {
-	TenantID    string
-	Bucket      string
-	Key         string
-	SizeBytes   int64
-	ContentType string
+	TenantID       string
+	IdempotencyKey string
+	Bucket         string
+	Key            string
+	SizeBytes      int64
+	ContentType    string
 }
 
 type StorageResourceGetRequest struct {
