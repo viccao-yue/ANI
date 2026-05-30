@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
+from copy import deepcopy
 from pathlib import Path
 from unittest.mock import patch
 
@@ -58,6 +59,110 @@ class ReconcileHALiveGateTest(unittest.TestCase):
         self.assertIn("follower-acquires-lease", check_ids)
         self.assertIn("reconcile-continues-after-failover", check_ids)
 
+    def test_contract_gate_rejects_live_check_command_non_string(self) -> None:
+        document = deepcopy(gate.load_gate(gate.DEFAULT_GATE))
+        document["live_checks"][0]["command"] = True
+
+        with self.assertRaises(SystemExit) as raised:
+            gate.validate_contract(document)
+
+        self.assertIn("live check command must be a non-empty string", str(raised.exception))
+
+    def test_cli_rejects_empty_gate_path_before_loading(self) -> None:
+        document = gate.load_gate(gate.DEFAULT_GATE)
+        with (
+            patch("sys.argv", ["validate_reconcile_ha_live_gate.py", "--gate", ""]),
+            patch.object(gate, "load_gate", return_value=document) as load_gate,
+            patch.object(gate, "validate_docs"),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                gate.main()
+
+        self.assertIn("gate path must not be empty", str(raised.exception))
+        load_gate.assert_not_called()
+
+    def test_cli_rejects_gate_path_surrounding_whitespace_before_loading(self) -> None:
+        document = gate.load_gate(gate.DEFAULT_GATE)
+        with (
+            patch("sys.argv", ["validate_reconcile_ha_live_gate.py", "--gate", f" {gate.DEFAULT_GATE} "]),
+            patch.object(gate, "load_gate", return_value=document) as load_gate,
+            patch.object(gate, "validate_docs"),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                gate.main()
+
+        self.assertIn("gate path must not contain surrounding whitespace", str(raised.exception))
+        load_gate.assert_not_called()
+
+    def test_cli_reports_missing_gate_path_outside_root_without_traceback(self) -> None:
+        missing_gate = Path(tempfile.gettempdir()) / "ani-missing-reconcile-ha-live-gate.yaml"
+        with (
+            patch("sys.argv", ["validate_reconcile_ha_live_gate.py", "--gate", str(missing_gate)]),
+            patch.object(gate, "validate_docs"),
+        ):
+            with self.assertRaises(SystemExit) as raised:
+                gate.main()
+
+        self.assertIn(f"missing {missing_gate}", str(raised.exception))
+
+    def test_cli_reports_unreadable_gate_path_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            gate_path = Path(tmpdir)
+            with (
+                patch("sys.argv", ["validate_reconcile_ha_live_gate.py", "--gate", str(gate_path)]),
+                patch.object(gate, "validate_docs"),
+            ):
+                with self.assertRaises(SystemExit) as raised:
+                    gate.main()
+
+        self.assertIn(f"unreadable {gate_path}", str(raised.exception))
+
+    def test_cli_reports_malformed_gate_yaml_without_traceback(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            gate_path = Path(tmpdir) / "malformed-reconcile-ha-live-gate.yaml"
+            gate_path.write_text("profile: [\n", encoding="utf-8")
+            with (
+                patch("sys.argv", ["validate_reconcile_ha_live_gate.py", "--gate", str(gate_path)]),
+                patch.object(gate, "validate_docs"),
+            ):
+                with self.assertRaises(SystemExit) as raised:
+                    gate.main()
+
+        self.assertIn(f"malformed {gate_path}", str(raised.exception))
+
+    def test_cli_reports_missing_doc_without_traceback(self) -> None:
+        document = gate.load_gate(gate.DEFAULT_GATE)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            missing_root = Path(tmpdir) / "missing-root"
+            with (
+                patch("sys.argv", ["validate_reconcile_ha_live_gate.py"]),
+                patch.object(gate, "load_gate", return_value=document),
+                patch.object(gate, "DOC_ROOT", missing_root),
+                patch.object(gate, "ROOT", missing_root),
+            ):
+                with self.assertRaises(SystemExit) as raised:
+                    gate.main()
+
+        self.assertIn("missing doc ANI-DOCS-INDEX.md", str(raised.exception))
+
+    def test_cli_reports_malformed_doc_without_traceback(self) -> None:
+        document = gate.load_gate(gate.DEFAULT_GATE)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            doc_root = Path(tmpdir)
+            root = doc_root / "repo"
+            root.mkdir()
+            (doc_root / "ANI-DOCS-INDEX.md").write_bytes(b"\xff")
+            with (
+                patch("sys.argv", ["validate_reconcile_ha_live_gate.py"]),
+                patch.object(gate, "load_gate", return_value=document),
+                patch.object(gate, "DOC_ROOT", doc_root),
+                patch.object(gate, "ROOT", root),
+            ):
+                with self.assertRaises(SystemExit) as raised:
+                    gate.main()
+
+        self.assertIn("malformed doc ANI-DOCS-INDEX.md", str(raised.exception))
+
     def test_live_gate_observes_lease_deletes_leader_and_confirms_failover(self) -> None:
         runner = FakeLiveRunner()
         result = gate.run_live(
@@ -87,6 +192,229 @@ class ReconcileHALiveGateTest(unittest.TestCase):
                 with self.assertRaises(SystemExit):
                     gate.main()
         run_live.assert_not_called()
+
+    def test_live_config_rejects_required_field_surrounding_whitespace(self) -> None:
+        config = gate.LiveConfig(
+            database_url=" postgres://ani:ani@127.0.0.1:5432/ani ",
+            namespace="ani-system",
+            worker_selector="app=ani-reconcile-worker",
+            metrics_url="http://127.0.0.1:18080/metrics",
+        )
+
+        with patch.object(gate.shutil, "which", return_value="/usr/bin/tool"):
+            with self.assertRaises(SystemExit) as raised:
+                gate.validate_live_config(config)
+
+        self.assertIn("database_url must not contain surrounding whitespace", str(raised.exception))
+
+    def test_cli_live_mode_rejects_evidence_output_surrounding_whitespace_before_running(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = Path(tmpdir) / "reconcile-ha-live-evidence.json"
+
+            with patch.object(gate, "validate_live_config"):
+                with patch.object(gate, "run_live") as run_live:
+                    with patch.object(gate, "write_live_evidence") as write_live_evidence:
+                        with patch(
+                            "sys.argv",
+                            [
+                                "validate_reconcile_ha_live_gate.py",
+                                "--live",
+                                "--database-url",
+                                "postgres://ani:ani@127.0.0.1:5432/ani",
+                                "--namespace",
+                                "ani-system",
+                                "--metrics-url",
+                                "http://127.0.0.1:18080/metrics",
+                                "--evidence-output",
+                                f" {output} ",
+                            ],
+                        ):
+                            with self.assertRaises(SystemExit) as raised:
+                                gate.main()
+
+        self.assertIn("evidence_output must not contain surrounding whitespace", str(raised.exception))
+        run_live.assert_not_called()
+        write_live_evidence.assert_not_called()
+
+    def test_cli_live_mode_rejects_empty_evidence_output_before_running(self) -> None:
+        with patch.object(gate, "validate_live_config"):
+            with patch.object(gate, "run_live", return_value={"status": "passed"}) as run_live:
+                with patch.object(gate, "write_live_evidence") as write_live_evidence:
+                    with patch(
+                        "sys.argv",
+                        [
+                            "validate_reconcile_ha_live_gate.py",
+                            "--live",
+                            "--database-url",
+                            "postgres://ani:ani@127.0.0.1:5432/ani",
+                            "--namespace",
+                            "ani-system",
+                            "--metrics-url",
+                            "http://127.0.0.1:18080/metrics",
+                            "--evidence-output",
+                            "",
+                        ],
+                    ):
+                        with self.assertRaises(SystemExit) as raised:
+                            gate.main()
+
+        self.assertIn("evidence_output must not be empty", str(raised.exception))
+        run_live.assert_not_called()
+        write_live_evidence.assert_not_called()
+
+    def test_cli_live_mode_rejects_directory_evidence_output_before_running(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch.object(gate, "validate_live_config"):
+                with patch.object(gate, "run_live", return_value={"status": "passed"}) as run_live:
+                    with patch.object(gate, "write_live_evidence") as write_live_evidence:
+                        with patch(
+                            "sys.argv",
+                            [
+                                "validate_reconcile_ha_live_gate.py",
+                                "--live",
+                                "--database-url",
+                                "postgres://ani:ani@127.0.0.1:5432/ani",
+                                "--namespace",
+                                "ani-system",
+                                "--metrics-url",
+                                "http://127.0.0.1:18080/metrics",
+                                "--evidence-output",
+                                tmpdir,
+                            ],
+                        ):
+                            with self.assertRaises(SystemExit) as raised:
+                                gate.main()
+
+        self.assertIn("evidence_output must be a file path", str(raised.exception))
+        run_live.assert_not_called()
+        write_live_evidence.assert_not_called()
+
+    def test_cli_live_mode_rejects_file_evidence_output_parent_before_running(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            parent = Path(tmpdir) / "not-a-directory"
+            parent.write_text("blocker", encoding="utf-8")
+            output = parent / "reconcile-ha-live-evidence.json"
+            with patch.object(gate, "validate_live_config"):
+                with patch.object(gate, "run_live", return_value={"status": "passed"}) as run_live:
+                    with patch.object(gate, "write_live_evidence") as write_live_evidence:
+                        with patch(
+                            "sys.argv",
+                            [
+                                "validate_reconcile_ha_live_gate.py",
+                                "--live",
+                                "--database-url",
+                                "postgres://ani:ani@127.0.0.1:5432/ani",
+                                "--namespace",
+                                "ani-system",
+                                "--metrics-url",
+                                "http://127.0.0.1:18080/metrics",
+                                "--evidence-output",
+                                str(output),
+                            ],
+                        ):
+                            with self.assertRaises(SystemExit) as raised:
+                                gate.main()
+
+        self.assertIn("evidence_output parent must be a directory", str(raised.exception))
+        run_live.assert_not_called()
+        write_live_evidence.assert_not_called()
+
+    def test_cli_live_mode_rejects_blocked_evidence_output_parent_before_running(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            blocker = Path(tmpdir) / "blocked-parent"
+            blocker.write_text("blocker", encoding="utf-8")
+            output = blocker / "child" / "reconcile-ha-live-evidence.json"
+            with patch.object(gate, "validate_live_config"):
+                with patch.object(gate, "run_live", return_value={"status": "passed"}) as run_live:
+                    with patch.object(gate, "write_live_evidence") as write_live_evidence:
+                        with patch(
+                            "sys.argv",
+                            [
+                                "validate_reconcile_ha_live_gate.py",
+                                "--live",
+                                "--database-url",
+                                "postgres://ani:ani@127.0.0.1:5432/ani",
+                                "--namespace",
+                                "ani-system",
+                                "--metrics-url",
+                                "http://127.0.0.1:18080/metrics",
+                                "--evidence-output",
+                                str(output),
+                            ],
+                        ):
+                            with self.assertRaises(SystemExit) as raised:
+                                gate.main()
+
+        self.assertIn("evidence_output parent must be a directory", str(raised.exception))
+        run_live.assert_not_called()
+        write_live_evidence.assert_not_called()
+
+    def test_cli_live_mode_rejects_unwritable_evidence_output_before_running(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = Path(tmpdir) / "reconcile-ha-live-evidence.json"
+            output.write_text("existing evidence", encoding="utf-8")
+            output.chmod(0o400)
+            try:
+                with patch.object(gate, "validate_live_config"):
+                    with patch.object(gate, "run_live", return_value={"status": "passed"}) as run_live:
+                        with patch.object(gate, "write_live_evidence") as write_live_evidence:
+                            with patch(
+                                "sys.argv",
+                                [
+                                    "validate_reconcile_ha_live_gate.py",
+                                    "--live",
+                                    "--database-url",
+                                    "postgres://ani:ani@127.0.0.1:5432/ani",
+                                    "--namespace",
+                                    "ani-system",
+                                    "--metrics-url",
+                                    "http://127.0.0.1:18080/metrics",
+                                    "--evidence-output",
+                                    str(output),
+                                ],
+                            ):
+                                with self.assertRaises(SystemExit) as raised:
+                                    gate.main()
+            finally:
+                output.chmod(0o600)
+
+        self.assertIn("evidence_output must be writable", str(raised.exception))
+        run_live.assert_not_called()
+        write_live_evidence.assert_not_called()
+
+    def test_cli_live_mode_rejects_unwritable_evidence_output_parent_before_running(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            parent = Path(tmpdir) / "evidence"
+            parent.mkdir()
+            output = parent / "reconcile-ha-live-evidence.json"
+            parent.chmod(0o500)
+            try:
+                with patch.object(gate, "validate_live_config"):
+                    with patch.object(gate, "run_live", return_value={"status": "passed"}) as run_live:
+                        with patch.object(gate, "write_live_evidence") as write_live_evidence:
+                            with patch(
+                                "sys.argv",
+                                [
+                                    "validate_reconcile_ha_live_gate.py",
+                                    "--live",
+                                    "--database-url",
+                                    "postgres://ani:ani@127.0.0.1:5432/ani",
+                                    "--namespace",
+                                    "ani-system",
+                                    "--metrics-url",
+                                    "http://127.0.0.1:18080/metrics",
+                                    "--evidence-output",
+                                    str(output),
+                                ],
+                            ):
+                                with self.assertRaises(SystemExit) as raised:
+                                    gate.main()
+            finally:
+                parent.chmod(0o700)
+
+        self.assertIn("evidence_output parent must be writable", str(raised.exception))
+        run_live.assert_not_called()
+        write_live_evidence.assert_not_called()
 
     def test_cli_live_mode_writes_evidence_json_when_requested(self) -> None:
         fake_evidence = {
@@ -124,7 +452,22 @@ class ReconcileHALiveGateTest(unittest.TestCase):
                             pass
 
             self.assertTrue(output.exists())
-            self.assertEqual(json.loads(output.read_text(encoding="utf-8")), fake_evidence)
+            written = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual("reconcile-ha-live-gate", written["id"])
+            self.assertEqual("M1-RECONCILE-LIVE-A", written["profile"])
+            for key, value in fake_evidence.items():
+                self.assertEqual(value, written[key])
+
+
+    def test_live_evidence_rejects_unusable_output_path(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            blocker = Path(tmpdir) / "not-a-directory"
+            blocker.write_text("blocker", encoding="utf-8")
+
+            with self.assertRaises(SystemExit) as raised:
+                gate.write_live_evidence(blocker / "evidence.json", {"status": "passed"})
+
+        self.assertIn("evidence output unusable", str(raised.exception))
 
 
 if __name__ == "__main__":

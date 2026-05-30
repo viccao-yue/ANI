@@ -27,31 +27,54 @@ REQUIRED_CHECKS = {
     "objectstore-read-sealed-content",
     "kms-stream-open",
 }
+REQUIRED_ENV = {
+    "ANI_GATEWAY_URL",
+    "ANI_BEARER_TOKEN",
+    "KMS_PROVIDER_BASE_URL",
+    "KMS_PROVIDER_BEARER_TOKEN",
+    "OBJECTSTORE_LIVE_PUT_URL",
+    "OBJECTSTORE_LIVE_GET_URL",
+}
 REQUIRED_DOC_TOKENS = [
     "M1-ENCRYPT-LIVE-A",
     "validate-kms-sm4-live-gate",
     "KMS/SM4",
     "provider streaming",
 ]
+PROFILE = "M1-ENCRYPT-LIVE-A"
+GATE_ID = "kms-sm4-live-gate"
 
 
 def fail(message: str) -> None:
     raise SystemExit(f"KMS/SM4 live gate invalid: {message}")
 
 
+def gate_path_label(path: Path) -> str:
+    try:
+        return str(path.relative_to(ROOT))
+    except ValueError:
+        return str(path)
+
+
 def load_gate(path: Path) -> dict[str, Any]:
+    label = gate_path_label(path)
     if not path.exists():
-        fail(f"missing {path.relative_to(ROOT)}")
-    with path.open(encoding="utf-8") as handle:
-        data = yaml.safe_load(handle)
+        fail(f"missing {label}")
+    try:
+        with path.open(encoding="utf-8") as handle:
+            data = yaml.safe_load(handle)
+    except OSError:
+        fail(f"unreadable {label}")
+    except yaml.YAMLError:
+        fail(f"malformed {label}")
     if not isinstance(data, dict):
-        fail(f"{path.relative_to(ROOT)} must be a YAML object")
+        fail(f"{label} must be a YAML object")
     return data
 
 
 def validate_contract(document: dict[str, Any]) -> None:
-    if document.get("profile") != "M1-ENCRYPT-LIVE-A":
-        fail("profile must be M1-ENCRYPT-LIVE-A")
+    if document.get("profile") != PROFILE:
+        fail(f"profile must be {PROFILE}")
     if document.get("status") not in {"contract", "live", "production_like"}:
         fail("status must be contract, live or production_like")
     endpoints = document.get("required_endpoints")
@@ -71,8 +94,9 @@ def validate_contract(document: dict[str, Any]) -> None:
         if not isinstance(check, dict):
             fail("live check must be an object")
         for field in ("id", "command", "pass_condition"):
-            if not check.get(field):
-                fail(f"live check missing {field}")
+            value = check.get(field)
+            if not isinstance(value, str) or not value.strip():
+                fail(f"live check {field} must be a non-empty string")
         check_ids.add(check["id"])
     missing = REQUIRED_CHECKS - check_ids
     if missing:
@@ -87,7 +111,14 @@ def validate_docs() -> None:
         "development-records/README.md": ROOT / "development-records/README.md",
     }
     for label, path in docs.items():
-        content = path.read_text(encoding="utf-8")
+        try:
+            content = path.read_text(encoding="utf-8")
+        except FileNotFoundError:
+            fail(f"missing doc {label}")
+        except OSError:
+            fail(f"unreadable doc {label}")
+        except UnicodeError:
+            fail(f"malformed doc {label}")
         for token in REQUIRED_DOC_TOKENS:
             if token not in content:
                 fail(f"{label} must reference {token}")
@@ -174,6 +205,9 @@ def validate_live_config(config: LiveConfig) -> None:
     missing = [name for name, value in required.items() if not value.strip()]
     if missing:
         fail(f"live mode requires {', '.join(missing)}")
+    whitespace = [name for name, value in required.items() if value != value.strip()]
+    if whitespace:
+        fail(f"{', '.join(whitespace)} must not contain surrounding whitespace")
 
 
 def run_live(config: LiveConfig, runner: HTTPRunner | None = None) -> dict[str, object]:
@@ -257,8 +291,42 @@ def run_live(config: LiveConfig, runner: HTTPRunner | None = None) -> dict[str, 
 
 
 def write_live_evidence(path: Path, evidence: dict[str, object]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(evidence, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        identified = {**evidence, "id": GATE_ID, "profile": PROFILE}
+        path.write_text(json.dumps(identified, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    except OSError as err:
+        fail(f"evidence output unusable: {err}")
+
+
+def validate_gate_path(path: str) -> None:
+    if not path.strip():
+        fail("gate path must not be empty")
+    if path != path.strip():
+        fail("gate path must not contain surrounding whitespace")
+
+
+def validate_evidence_output(path: str) -> None:
+    if not path.strip():
+        fail("evidence_output must not be empty")
+    if path != path.strip():
+        fail("evidence_output must not contain surrounding whitespace")
+    output_path = Path(path)
+    if output_path.is_dir():
+        fail("evidence_output must be a file path")
+    if output_path.parent.exists() and not output_path.parent.is_dir():
+        fail("evidence_output parent must be a directory")
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        fail("evidence_output parent must be a directory")
+    try:
+        if output_path.parent.stat().st_mode & 0o222 == 0:
+            fail("evidence_output parent must be writable")
+        if output_path.exists() and output_path.stat().st_mode & 0o222 == 0:
+            fail("evidence_output must be writable")
+    except OSError:
+        fail("evidence_output must be writable")
 
 
 def main() -> int:
@@ -276,11 +344,12 @@ def main() -> int:
     parser.add_argument("--plaintext", default=os.getenv("KMS_SM4_LIVE_PLAINTEXT", "ani-live-sm4-object-content"))
     parser.add_argument(
         "--evidence-output",
-        default=os.getenv("ANI_KMS_SM4_LIVE_EVIDENCE_OUTPUT", ""),
+        default=os.getenv("ANI_KMS_SM4_LIVE_EVIDENCE_OUTPUT") or None,
         help="write --live evidence JSON to this path",
     )
     args = parser.parse_args()
 
+    validate_gate_path(args.gate)
     document = load_gate(Path(args.gate))
     validate_contract(document)
     validate_docs()
@@ -297,8 +366,10 @@ def main() -> int:
             plaintext=args.plaintext.encode("utf-8"),
         )
         validate_live_config(config)
+        if args.evidence_output is not None:
+            validate_evidence_output(args.evidence_output)
         result = run_live(config)
-        if args.evidence_output:
+        if args.evidence_output is not None:
             write_live_evidence(Path(args.evidence_output), result)
             print(f"M1-ENCRYPT-LIVE-A live checks valid; evidence written to {args.evidence_output}")
         else:

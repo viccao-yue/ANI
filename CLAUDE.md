@@ -9,7 +9,9 @@ This file provides mandatory guidance for Claude Code / Codex / Cursor / GPT cod
 ## 0. 当前状态
 
 ```text
+本仓库范围：仅 ANI Core（基础设施平台底座）。ANI Services 已冻结并移交外部产品团队，本仓库不再开发任何 Services 代码。
 当前阶段：以 repo/CURRENT-SPRINT.md 为准；当前为 Phase 1 / Sprint 5 收敛中
+当前重心：真实 live gate 推进（物理服务器 2026-05-29 到位）+ guard 冻结
 当前不是 Phase 2：Phase 2 是 2026-10 以后延期能力
 下一步入口：repo/CURRENT-SPRINT.md
 文档导航：ANI-DOCS-INDEX.md
@@ -17,6 +19,19 @@ This file provides mandatory guidance for Claude Code / Codex / Cursor / GPT cod
 ```
 
 本文只维护稳定规则、读取顺序和不可破坏的工程边界。当前 Sprint 的详细完成项、未完成项、验收命令和下一步，只允许维护在 `repo/CURRENT-SPRINT.md`、`ANI-06-开发计划.md` Section 零和 `repo/development-records/README.md`。
+
+### 仓库范围与 Services 冻结（强制）
+
+1. **本仓库只负责 ANI Core。** Core 是基础设施平台底座，对外输出 Core OpenAPI REST API、Core SDK、CLI。
+2. **ANI Services 在本仓库内全面冻结：一行 Services 代码都不再新增、修改或"优化"。** Services 已移交外部产品团队开发。`repo/services/model-service/`、`repo/services/kb-service/`、`repo/ai/`、`repo/operators/inference-operator/`、`repo/frontends/` 等旧 Services 骨架只读保留，不得继续开发；任何"补全 Services 逻辑"的改动都属于越界。
+3. **外部团队将于 2026-06-10 前后产出清晰的 ANI 产品功能、交互风格、API 列表与参数定义。** Core 的职责是按这些定义实现并支撑落地：以"AI Coding 快速循环——他们改产品/接口定义，Core 据此生成/调整代码"为协作模式。在该定义到位前，Core 不得基于猜测提前为 Services 建设具体业务能力边界，避免返工。
+4. 跨层契约仍以 `repo/api/openapi/v1.yaml`（Core）为唯一真实来源；Services 业务资源不回流 Core API。
+
+### 本地真实开发环境提示
+
+当前工作区已具备三台真实物理开发/验证/测试服务器，可在需要执行真实底座开发、在线验证或 live gate 时使用。服务器硬件与软件系统基线、管理 IP、带外访问方式、SSH 登录用户名和密码记录在本机本地文件 `local-secrets/dev-physical-servers.md`。
+
+该文件包含敏感凭据，已通过本机 Git 排除规则避免向 GitHub 推送；AI agent 可在需要真实环境时读取并使用，但不得把其中的 IP、用户名、密码或完整凭据内容复制到可提交文件、development records、公开日志或最终回复中。
 
 ---
 
@@ -93,12 +108,16 @@ This file provides mandatory guidance for Claude Code / Codex / Cursor / GPT cod
 
 1. 代码生成批次使用可回溯命名，例如 `M2.1-TASK-A`、`M1-INSTANCE-U`。历史 `Stage 3A/3B/3C` 仅可作为旧名说明。
 2. 每个批次完成时，必须通过当前批次验收命令、`make test`、`make validate-architecture`、`git diff --check`。
-3. 每个批次完成时，必须更新 `repo/development-records/{批次名}.md`、`repo/development-records/README.md`、`repo/CURRENT-SPRINT.md`、`ANI-06-开发计划.md`。
+3. 每个批次完成时，按批次类型执行不同更新规则：
+   - **Feature batch**（新增产品能力、代码边界、API 路径、live gate 定义等）：必须更新 `repo/development-records/{批次名}.md`、`repo/development-records/README.md`、`repo/CURRENT-SPRINT.md`、`ANI-06-开发计划.md`（四个文件均需更新）。
+   - **Guard micro-batch**（连续类型守卫、空值诊断守卫、路径守卫等同类重复批次，如 M1-REAL-LAB-* 系列）：**只在 `repo/development-records/guard-series/{series}-guard-index.md` 追加一行**（批次 ID + 类别 + guard 名称即为完整记录，不再单独建 `{批次名}.md`）+ 更新 `repo/CURRENT-SPRINT.md` 中对应 guard series 条目的"最新 guard ID"标记（单行）；不更新 README.md 完整列表，不更新 ANI-06 Section 零。guard 的可验证证据由对应校验脚本（如 `scripts/validate_real_k8s_profile.py`）及其测试承载，不需要逐 guard 的独立 markdown 记录。
+   - 判断标准：批次属于已有系列（如 M1-REAL-LAB-*），且本质是边界检查/诊断守卫而非新产品能力。新系列首次建立时视为 Feature batch。
 4. Sprint 切换时，必须同步 `ANI-06-开发计划.md`、`repo/CURRENT-SPRINT.md`、`ANI-DOCS-INDEX.md`。
 5. 进度文档必须以当前工作区真实代码、API 契约和测试为准；云端开发或 GitHub 推送状态不明时，不得把未落地能力标记为完成。
 6. 从 Sprint 5 起，涉及 K8s、Kube-OVN、KubeVirt、vCluster、KMS/SM4、K8s Secret 注入等真实底座组件的能力，必须并行建设真实环境门禁；`REAL-K8S-LAB-A` 和 `make validate-real-k8s-profile` 是当前真实底座验证入口。local profile 只能证明 API/SDK/状态机/调用边界，不能标记为 real-provider、runtime ready 或 production ready。
 7. `CLAUDE.md` 是轻量入口和稳定强制规则文件，禁止写入单批次完成清单、API path 长列表、文件级变更清单、每日开发流水账或历史归档。动态进度必须写入 `repo/CURRENT-SPRINT.md`、`ANI-06-开发计划.md` Section 零或 `repo/development-records/*.md`。
 8. 修改文档入口后必须运行 `make validate-doc-entrypoints`，防止 `CLAUDE.md` 再次膨胀或与文档职责矩阵冲突。
+9. **Guard 冻结令（2026-05-30 起强制）：** REAL-K8S-LAB guard 系列（`M1-REAL-LAB-*`）已达边际收益递减，默认**冻结，不再新增**。唯一例外：真实 live gate 执行中**实际复现了**某个缺陷，且该缺陷只能用一个新 guard 防回归——此时才允许新增一个 guard，并在 guard-index 追加一行注明它对应的真实缺陷。不得再为"假设可能出现"的输入、字段、空值、空格、类型边角预防性地批量生成 guard。当前精力必须投向真实 live gate 跑通，而非扩充契约校验器。
 
 ---
 
