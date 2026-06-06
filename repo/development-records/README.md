@@ -38,6 +38,12 @@
 |---|---|---|
 | SPRINT11-SAFE-CLOSURE-A | Sprint 11 正式部署完成：部署前安全证据、Rook-Ceph live result、文档一致性和聚合门禁通过；不是实际 v1.0.0 发布或完整 production ready | sprint11-safe-closure-a-core-real-deployment.md |
 
+### Sprint 11 Maintenance（2026-06）
+
+| 批次 | 内容摘要 | 文件 |
+|---|---|---|
+| CORE-HISTORICAL-DOC-MARKER-COMPAT-A | Core 历史文档 marker 兼容：Sprint 8/9/10 doc validators 接受当前 Sprint 11 入口文档中的历史门禁/已完成归档表达，同时继续拒绝 stale current marker | core-historical-doc-marker-compat-a.md |
+
 ### Sprint 10 Delivery（2026-06）
 
 | 批次 | 内容摘要 | 文件 |

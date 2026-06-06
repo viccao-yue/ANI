@@ -1,7 +1,7 @@
 # KuberCloud ANI · 开发计划
 
 > 版本 V8.3 | 广州常青云科技有限公司 | 内部产品规划文件
-> 最后更新：2026-06-05（Sprint 11 / Core Real Deployment Validation 正式部署完成；Rook-Ceph 正式部署已完成；本仓库只推进 ANI Core，不开发 Services/RAG/Console/BOSS/frontends；真实服务器只读验证已完成；`ani-rbd-ssd` StorageClass 已上线；KubeVirt VM RBD storage smoke 与逐节点 reboot resilience 已通过；未执行手工挂载、`/etc/fstab` 修改、系统盘变更、默认 StorageClass 切换或已有 PVC 迁移）
+> 最后更新：2026-06-06（Sprint 11 / Core Real Deployment Validation 正式部署完成；Rook-Ceph 正式部署已完成；本仓库只推进 ANI Core，不开发 Services/RAG/Console/BOSS/frontends；真实服务器只读验证已完成；`ani-rbd-ssd` StorageClass 已上线；KubeVirt VM RBD storage smoke 与逐节点 reboot resilience 已通过；历史 Sprint 8/9/10 Core 文档一致性门禁已兼容当前历史归档表达；未执行手工挂载、`/etc/fstab` 修改、系统盘变更、默认 StorageClass 切换或已有 PVC 迁移）
 
 ---
 
@@ -32,6 +32,7 @@
 关键节奏：外部 Services 团队预计 2026-06-10 前后给出清晰的产品功能/交互风格/API 列表与参数；ANI Core 据此以 AI Coding 快速循环实现支撑（他们改产品/接口定义 → Core 生成/调整代码）。该定义到位前，Core 不基于猜测提前建设 Services 业务能力，避免返工。
 当前重心：Sprint 11 / Core Real Deployment Validation 正式部署完成；真实服务器只读验证已完成；Rook-Ceph 正式部署已完成（CephCluster Ready/HEALTH_OK，5 SSD OSD，ani-rbd-ssd StorageClass，RBD smoke test 与逐节点 reboot resilience 通过）；Sprint 11 执行环境：正式部署执行环境；不是实际 v1.0.0 发布；破坏性操作须单独审批；Sprint 5-10 历史回归门禁有效；guard 冻结仍有效；详见 repo/CURRENT-SPRINT.md
 最近里程碑（详情见 repo/CURRENT-SPRINT.md 已完成切片）：
+  2026-06-06  CORE-HISTORICAL-DOC-MARKER-COMPAT-A：修复 Sprint 8/9/10 Core 历史文档一致性 validator 的 marker 逻辑，接受当前 Sprint 11 入口文档中的历史门禁/已完成归档表达，同时继续拒绝 stale current marker [Maintenance]
   2026-06-05  CORE-ROOK-CEPH-REBOOT-RESILIENCE-A：逐节点 reboot resilience 通过，两个 worker 先后重启后 VM/PVC 恢复，control-plane 最后重启后 API readyz、mon/mgr/OSD、Ceph 和 worker VM/PVC 观测恢复；未并发重启 [真实环境]
   2026-06-05  CORE-ROOK-CEPH-VM-STORAGE-SMOKE-A：KubeVirt VM RBD storage smoke 通过，临时 VM 挂载 Rook-Ceph RBD Block PVC，guest 看到块设备并完成写入尝试，临时 VM/PVC/PV/StorageClass 已清理 [真实环境]
   2026-06-05  CORE-ROOK-CEPH-LIVE-DEPLOYMENT-A：Rook-Ceph 正式 live 部署完成，Rook `v1.20.0`、Ceph `v19.2.3`、CSI operator/CSI-Addons CRD 已安装，CephCluster `Ready/HEALTH_OK`，5 个 SSD OSD 运行，`ani-rbd-ssd` StorageClass 与 RBD smoke test 通过 [真实环境]
@@ -108,7 +109,7 @@
 | Sprint 8 ⭐ | ✅ Core-only 已完成 | 2026-06-04；计划窗口 2026-09-01~09-15 | `CORE-HARDEN-A`、`CORE-INSTALLER-LIVE-A`、`CORE-OFFLINE-PACK-A`、`CORE-CLI-B`、`CORE-DOC-CONSISTENCY-A` 与 `SPRINT8-CLOSURE-A` 已完成；Console/BOSS 不在本仓库范围 |
 | Sprint 9 ⭐ | ✅ Core-only 已完成 | 2026-06-04；计划窗口 2026-09-16~09-25 | `CORE-RC-GATE-A`、`CORE-RELEASE-EVIDENCE-A`、`CORE-OFFLINE-CHECKSUM-A`、`CORE-CLI-VERSION-A`、`CORE-RC-DOC-CONSISTENCY-A` 与 `SPRINT9-CLOSURE-A` 已完成；这是 RC readiness，不是实际 RC cut |
 | Sprint 10 ⭐ | ✅ Core-only 已完成 | 2026-06-04；计划窗口 2026-09-26~09-30 | `CORE-ARTIFACT-MANIFEST-A`、`CORE-VERSION-POLICY-A`、`CORE-FINAL-READINESS-A`、`CORE-CLI-RELEASE-METADATA-A`、`CORE-FINAL-DOC-CONSISTENCY-A` 与 `SPRINT10-CLOSURE-A` 已完成；这是 release-prep readiness，不是实际 v1.0.0 发布 |
-| Sprint 11 ⭐ | ✅ Core Real Deployment Validation 正式部署完成；Rook-Ceph 正式部署已完成 | 2026-06-05 | `SPRINT11-KICKOFF-A`、`CORE-STORAGE-DISK-RISK-A`、`CORE-REAL-DEPLOY-A`、`CORE-ROOK-CEPH-FORMAL-DEPLOYMENT-A`、`CORE-ROOK-CEPH-LIVE-DEPLOYMENT-A`、`CORE-ROOK-CEPH-VM-STORAGE-SMOKE-A`、`CORE-ROOK-CEPH-REBOOT-RESILIENCE-A`、`CORE-SAFE-COMPLETION-A`、`CORE-REAL-DEPLOY-DOC-CONSISTENCY-A` 与 `SPRINT11-SAFE-CLOSURE-A` 已建立；CephCluster `Ready/HEALTH_OK`，5 个 SSD OSD 运行，`ani-rbd-ssd` StorageClass、RBD smoke test、KubeVirt VM RBD storage smoke 和逐节点 reboot resilience 通过；不是实际 v1.0.0 发布或完整 production ready |
+| Sprint 11 ⭐ | ✅ Core Real Deployment Validation 正式部署完成；Rook-Ceph 正式部署已完成 | 2026-06-05 | `SPRINT11-KICKOFF-A`、`CORE-STORAGE-DISK-RISK-A`、`CORE-REAL-DEPLOY-A`、`CORE-ROOK-CEPH-FORMAL-DEPLOYMENT-A`、`CORE-ROOK-CEPH-LIVE-DEPLOYMENT-A`、`CORE-ROOK-CEPH-VM-STORAGE-SMOKE-A`、`CORE-ROOK-CEPH-REBOOT-RESILIENCE-A`、`CORE-SAFE-COMPLETION-A`、`CORE-REAL-DEPLOY-DOC-CONSISTENCY-A`、`SPRINT11-SAFE-CLOSURE-A` 与 `CORE-HISTORICAL-DOC-MARKER-COMPAT-A` 已建立；CephCluster `Ready/HEALTH_OK`，5 个 SSD OSD 运行，`ani-rbd-ssd` StorageClass、RBD smoke test、KubeVirt VM RBD storage smoke 和逐节点 reboot resilience 通过；历史 Sprint 8/9/10 Core doc validators 已兼容当前历史归档表达；不是实际 v1.0.0 发布或完整 production ready |
 
 ### Core 与外部 Services 团队的协作门禁
 

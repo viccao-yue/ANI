@@ -8,6 +8,25 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SPRINT9_MARKER = "Sprint 9 Core-only 代码开发已完成"
+SPRINT9_MARKERS_BY_DOCUMENT = {
+    "ANI-DOCS-INDEX.md": (
+        SPRINT9_MARKER,
+        "Sprint 6-10 完成 contract/local/release-prep scaffold",
+    ),
+    "ANI-06-开发计划.md": (
+        SPRINT9_MARKER,
+        "Sprint 9 ⭐ | ✅ Core-only 已完成",
+        "SPRINT9-CLOSURE-A：Sprint 9 Core-only",
+    ),
+    "repo/CURRENT-SPRINT.md": (
+        SPRINT9_MARKER,
+        "Sprint 9 RC readiness gates",
+    ),
+    "repo/development-records/README.md": (
+        SPRINT9_MARKER,
+        "SPRINT9-CLOSURE-A",
+    ),
+}
 STALE_CURRENT_MARKERS = (
     "当前重心：Sprint 8 Core-only 代码开发已完成",
     "下一步准备 Sprint 9",
@@ -45,7 +64,7 @@ def validate_workspace(root: Path) -> None:
         ("repo/CURRENT-SPRINT.md", current),
         ("repo/development-records/README.md", records),
     ):
-        if SPRINT9_MARKER not in content:
+        if not contains_any(content, SPRINT9_MARKERS_BY_DOCUMENT[label]):
             raise SystemExit(f"{label}: missing Sprint 9 completed marker")
     for target in REQUIRED_MAKE_TARGETS:
         if f"{target}:" not in makefile:
@@ -59,6 +78,10 @@ def read(path: Path) -> str:
     if not path.exists():
         raise SystemExit(f"required document does not exist: {path}")
     return path.read_text(encoding="utf-8")
+
+
+def contains_any(content: str, markers: tuple[str, ...]) -> bool:
+    return any(marker in content for marker in markers)
 
 
 def main() -> int:

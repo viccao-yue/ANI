@@ -12,12 +12,12 @@
 |---|---|
 | **冲刺编号** | Sprint 11（Core Real Deployment Validation 正式部署完成） |
 | **主题** | Core real deployment validation + Rook-Ceph VM-first block storage live deployment |
-| **当前状态** | `SPRINT11-KICKOFF-A`、`CORE-STORAGE-DISK-RISK-A`、`CORE-REAL-DEPLOY-A`、`CORE-ROOK-CEPH-FORMAL-DEPLOYMENT-A`、`CORE-ROOK-CEPH-LIVE-DEPLOYMENT-A`、`CORE-ROOK-CEPH-VM-STORAGE-SMOKE-A`、`CORE-ROOK-CEPH-REBOOT-RESILIENCE-A`、`CORE-SAFE-COMPLETION-A`、`CORE-REAL-DEPLOY-DOC-CONSISTENCY-A` 与 `SPRINT11-SAFE-CLOSURE-A` 已建立代码和文档闭环。当前完成真实服务器只读验证、磁盘/存储风险计划、Rook-Ceph 正式部署代码包、真实 Rook-Ceph live 部署、RBD PVC/Pod smoke test、KubeVirt VM RBD storage smoke、逐节点 reboot resilience 和聚合门禁 |
+| **当前状态** | `SPRINT11-KICKOFF-A`、`CORE-STORAGE-DISK-RISK-A`、`CORE-REAL-DEPLOY-A`、`CORE-ROOK-CEPH-FORMAL-DEPLOYMENT-A`、`CORE-ROOK-CEPH-LIVE-DEPLOYMENT-A`、`CORE-ROOK-CEPH-VM-STORAGE-SMOKE-A`、`CORE-ROOK-CEPH-REBOOT-RESILIENCE-A`、`CORE-SAFE-COMPLETION-A`、`CORE-REAL-DEPLOY-DOC-CONSISTENCY-A`、`SPRINT11-SAFE-CLOSURE-A` 与 `CORE-HISTORICAL-DOC-MARKER-COMPAT-A` 已建立代码和文档闭环。当前完成真实服务器只读验证、磁盘/存储风险计划、Rook-Ceph 正式部署代码包、真实 Rook-Ceph live 部署、RBD PVC/Pod smoke test、KubeVirt VM RBD storage smoke、逐节点 reboot resilience、聚合门禁和历史文档 marker 兼容维护 |
 | **执行环境** | Sprint 11 执行环境：正式部署执行环境。允许已审批的 Rook-Ceph operator、CSI operator、CSI-Addons CRD、CephCluster、OSD、CephBlockPool、StorageClass 部署、受控 RBD smoke test、KubeVirt VM RBD storage smoke 和逐节点 reboot resilience；禁止手工挂载、fstab 修改、系统盘变更、盘符对齐、并发重启、默认 StorageClass 切换和已有 PVC 迁移 |
 | **已由代码/真实环境证明完成** | Sprint 11：三台物理服务器 read-only disk/K8s/KubeVirt/storage 状态已核查；`rook-ceph` CephCluster 为 `Ready/HEALTH_OK`；3 个 mon、1 个 mgr、5 个 OSD 运行；`ceph-rbd-ssd` pool 为 `Ready`；`ani-rbd-ssd` StorageClass 已上线；临时 RBD PVC/Pod smoke test 已通过并清理；临时 KubeVirt VM 已挂载 RBD Block PVC，guest 看到块设备并完成写入尝试；两个 worker 逐台重启后 VM/PVC 恢复，control-plane 最后重启后 API readyz、mon/mgr/OSD、Ceph 和 worker VM/PVC 观测恢复；临时 VM/PVC/PV/StorageClass 均已清理 |
 | **生产化边界** | Sprint 11 已完成 VM 优先块存储的真实部署验证和逐节点 reboot resilience，但仍不是实际 v1.0.0 发布，不代表完整 production ready、备份/恢复演练、容量告警、故障注入、长期 soak、升级/回滚演练或业务迁移完成。后续破坏性磁盘操作、默认 StorageClass 切换、已有 PVC 迁移、HDD class 引入、并发重启或更大故障演练仍必须单独审批 |
 | **关联历史门禁** | Sprint 5 REAL-K8S-LAB-A 和 live gate evidence；Sprint 7 installer/offline/CLI/regression gates；Sprint 8 release hardening/offline/CLI/doc gates；Sprint 9 RC readiness gates；Sprint 10 release-prep gates |
-| **最后校准日期** | 2026-06-05 |
+| **最后校准日期** | 2026-06-06 |
 
 ## Sprint 11 已完成切片
 
@@ -33,6 +33,7 @@
 8. `CORE-ROOK-CEPH-VM-STORAGE-SMOKE-A`：启动临时 KubeVirt VM 挂载 Rook-Ceph RBD Block PVC；PVC/PV Bound，VMI Running/Ready，guest 看到 `/dev/vdb` 并完成块设备写入尝试；临时 VM/PVC/PV/StorageClass 已删除。
 9. `CORE-ROOK-CEPH-REBOOT-RESILIENCE-A`：按 worker-first、control-plane-last 顺序逐台重启三台节点；两个 worker 的 VM/PVC 恢复通过，control-plane 重启后 API readyz、mon/mgr/OSD、Ceph 和 worker VM/PVC 观测恢复；未并发重启。
 10. `SPRINT11-SAFE-CLOSURE-A`：Sprint 11 最终安全闭环已更新为“部署前安全证据 + 部署后 live result + VM storage smoke result + reboot resilience result”记录；不是实际 v1.0.0 发布或完整 production ready。
+11. `CORE-HISTORICAL-DOC-MARKER-COMPAT-A`：修复 Sprint 8/9/10 Core 历史文档一致性 validator 的 marker 逻辑，使其接受当前入口文档中的历史门禁/已完成归档表达，同时继续拒绝 stale current marker；不新增 Services 或 Core API path。
 
 ## 真实环境结论
 
@@ -60,6 +61,7 @@
 - Sprint 8 Core-only 代码开发已完成，并继续作为 release hardening、installer live-readiness、offline pack、CLI-B 和文档一致性历史门禁保留。
 - Sprint 9 Core-only 代码开发已完成，并继续作为 RC readiness、release evidence、offline checksum、CLI version 和文档一致性历史门禁保留。
 - Sprint 10 Core-only 代码开发已完成，并继续作为 artifact manifest、version policy、final readiness、CLI release metadata 和文档一致性历史门禁保留；Sprint 10 不是实际 v1.0.0 发布。
+- Sprint 8/9/10 历史文档一致性门禁接受当前 Sprint 11 入口文档中的历史门禁/已完成归档表达，不要求入口文档保留旧 Sprint 的当前态短语。
 - Sprint 5 `REAL-K8S-LAB-A` / `make validate-real-k8s-profile` 仍作为真实底座历史门禁保留，覆盖 Kube-OVN、KubeVirt、vCluster 与 local profile / real-provider 边界。
 - Sprint 11 聚合门禁依赖 Sprint 10 release-prep，不重新打开这些历史 Sprint 的开发范围。
 

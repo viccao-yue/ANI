@@ -8,6 +8,21 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SPRINT8_MARKER = "Sprint 8 Core-only 代码开发已完成"
+SPRINT8_MARKERS_BY_DOCUMENT = {
+    "ANI-DOCS-INDEX.md": (
+        SPRINT8_MARKER,
+        "Sprint 6-10 完成 contract/local/release-prep scaffold",
+    ),
+    "ANI-06-开发计划.md": (
+        SPRINT8_MARKER,
+        "Sprint 8 ⭐ | ✅ Core-only 已完成",
+        "SPRINT8-CLOSURE-A：Sprint 8 Core-only release hardening",
+    ),
+    "repo/CURRENT-SPRINT.md": (
+        SPRINT8_MARKER,
+        "Sprint 8 release hardening/offline/CLI/doc gates",
+    ),
+}
 STALE_CURRENT_MARKERS = (
     "Sprint 7 Core-only 代码开发已完成",
     "下一步准备 Sprint 8",
@@ -45,7 +60,7 @@ def validate_workspace(root: Path) -> None:
         ("ANI-06-开发计划.md", ani_06),
         ("repo/CURRENT-SPRINT.md", current),
     ):
-        if SPRINT8_MARKER not in content:
+        if not contains_any(content, SPRINT8_MARKERS_BY_DOCUMENT[label]):
             raise SystemExit(f"{label}: missing Sprint 8 completed marker")
     for target in REQUIRED_MAKE_TARGETS:
         if f"{target}:" not in makefile:
@@ -59,6 +74,10 @@ def read(path: Path) -> str:
     if not path.exists():
         raise SystemExit(f"required document does not exist: {path}")
     return path.read_text(encoding="utf-8")
+
+
+def contains_any(content: str, markers: tuple[str, ...]) -> bool:
+    return any(marker in content for marker in markers)
 
 
 def main() -> int:

@@ -14,6 +14,27 @@ class CoreDocConsistencyValidationTest(unittest.TestCase):
     def test_default_docs_and_makefile_are_sprint8_aligned(self) -> None:
         doc_consistency.validate_workspace(doc_consistency.ROOT)
 
+    def test_validation_accepts_historical_sprint8_markers_after_later_sprints(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "repo" / "development-records").mkdir(parents=True)
+            (root / "ANI-DOCS-INDEX.md").write_text(
+                "Sprint 6-10 完成 contract/local/release-prep scaffold\n", encoding="utf-8"
+            )
+            (root / "ANI-06-开发计划.md").write_text("Sprint 8 ⭐ | ✅ Core-only 已完成\n", encoding="utf-8")
+            (root / "repo" / "CURRENT-SPRINT.md").write_text(
+                "Sprint 8 release hardening/offline/CLI/doc gates\n", encoding="utf-8"
+            )
+            (root / "repo" / "Makefile").write_text(
+                "\n".join(f"{target}:" for target in doc_consistency.REQUIRED_MAKE_TARGETS),
+                encoding="utf-8",
+            )
+            (root / "repo" / "development-records" / "README.md").write_text(
+                "\n".join(doc_consistency.REQUIRED_RECORDS), encoding="utf-8"
+            )
+
+            doc_consistency.validate_workspace(root)
+
     def test_validation_rejects_stale_sprint7_current_marker(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)

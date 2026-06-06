@@ -8,6 +8,25 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SPRINT10_MARKER = "Sprint 10 Core-only 代码开发已完成"
+SPRINT10_MARKERS_BY_DOCUMENT = {
+    "ANI-DOCS-INDEX.md": (
+        SPRINT10_MARKER,
+        "Sprint 6-10 完成 contract/local/release-prep scaffold",
+    ),
+    "ANI-06-开发计划.md": (
+        SPRINT10_MARKER,
+        "Sprint 10 ⭐ | ✅ Core-only 已完成",
+        "SPRINT10-CLOSURE-A：Sprint 10 Core-only",
+    ),
+    "repo/CURRENT-SPRINT.md": (
+        SPRINT10_MARKER,
+        "Sprint 10 release-prep gates",
+    ),
+    "repo/development-records/README.md": (
+        SPRINT10_MARKER,
+        "SPRINT10-CLOSURE-A",
+    ),
+}
 BOUNDARY_MARKER = "不是实际 v1.0.0 发布"
 STALE_CURRENT_MARKERS = (
     "当前重心：Sprint 9 Core-only 代码开发已完成",
@@ -47,7 +66,7 @@ def validate_workspace(root: Path) -> None:
         ("repo/CURRENT-SPRINT.md", current),
         ("repo/development-records/README.md", records),
     ):
-        if SPRINT10_MARKER not in content:
+        if not contains_any(content, SPRINT10_MARKERS_BY_DOCUMENT[label]):
             raise SystemExit(f"{label}: missing Sprint 10 completed marker")
         if BOUNDARY_MARKER not in content:
             raise SystemExit(f"{label}: missing Sprint 10 release boundary marker")
@@ -63,6 +82,10 @@ def read(path: Path) -> str:
     if not path.exists():
         raise SystemExit(f"required document does not exist: {path}")
     return path.read_text(encoding="utf-8")
+
+
+def contains_any(content: str, markers: tuple[str, ...]) -> bool:
+    return any(marker in content for marker in markers)
 
 
 def main() -> int:

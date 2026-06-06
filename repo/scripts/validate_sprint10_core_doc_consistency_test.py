@@ -14,6 +14,31 @@ class Sprint10CoreDocConsistencyValidationTest(unittest.TestCase):
     def test_default_docs_and_makefile_are_sprint10_aligned(self) -> None:
         doc_consistency.validate_workspace(doc_consistency.ROOT)
 
+    def test_validation_accepts_historical_sprint10_markers_after_later_sprints(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "repo" / "development-records").mkdir(parents=True)
+            (root / "ANI-DOCS-INDEX.md").write_text(
+                "Sprint 6-10 完成 contract/local/release-prep scaffold\n不是实际 v1.0.0 发布\n",
+                encoding="utf-8",
+            )
+            (root / "ANI-06-开发计划.md").write_text(
+                "Sprint 10 ⭐ | ✅ Core-only 已完成\n不是实际 v1.0.0 发布\n", encoding="utf-8"
+            )
+            (root / "repo" / "CURRENT-SPRINT.md").write_text(
+                "Sprint 10 release-prep gates\n不是实际 v1.0.0 发布\n", encoding="utf-8"
+            )
+            (root / "repo" / "Makefile").write_text(
+                "\n".join(f"{target}:" for target in doc_consistency.REQUIRED_MAKE_TARGETS),
+                encoding="utf-8",
+            )
+            (root / "repo" / "development-records" / "README.md").write_text(
+                "\n".join(doc_consistency.REQUIRED_RECORDS) + "\n不是实际 v1.0.0 发布\n",
+                encoding="utf-8",
+            )
+
+            doc_consistency.validate_workspace(root)
+
     def test_validation_rejects_stale_sprint9_current_marker(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
