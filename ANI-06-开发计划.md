@@ -32,6 +32,7 @@
 关键节奏：外部 Services 团队预计 2026-06-10 前后给出清晰的产品功能/交互风格/API 列表与参数；ANI Core 据此以 AI Coding 快速循环实现支撑（他们改产品/接口定义 → Core 生成/调整代码）。该定义到位前，Core 不基于猜测提前建设 Services 业务能力，避免返工。
 当前重心：Sprint 11 / Core Real Deployment Validation 正式部署完成；真实服务器只读验证已完成；Rook-Ceph 正式部署已完成（CephCluster Ready/HEALTH_OK，5 SSD OSD，ani-rbd-ssd StorageClass，RBD smoke test 与逐节点 reboot resilience 通过）；Sprint 11 执行环境：正式部署执行环境；不是实际 v1.0.0 发布；破坏性操作须单独审批；Sprint 5-10 历史回归门禁有效；guard 冻结仍有效；详见 repo/CURRENT-SPRINT.md
 最近里程碑（详情见 repo/CURRENT-SPRINT.md 已完成切片）：
+  2026-06-10  ANI-14-PHASE4-BATCH1-A：Phase 4 第一批 handler 骨架完成，新建 8 个 handler 文件（55 条路由），修改 stubs.go/router.go，Models/InferenceServices/KnowledgeBases/GpuContainers/Sandboxes/Tenant/Branding/Tasks 从 501→200，build/test/architecture 通过 [Feature batch]
   2026-06-06  CORE-HISTORICAL-DOC-MARKER-COMPAT-A：修复 Sprint 8/9/10 Core 历史文档一致性 validator 的 marker 逻辑，接受当前 Sprint 11 入口文档中的历史门禁/已完成归档表达，同时继续拒绝 stale current marker [Maintenance]
   2026-06-05  CORE-ROOK-CEPH-REBOOT-RESILIENCE-A：逐节点 reboot resilience 通过，两个 worker 先后重启后 VM/PVC 恢复，control-plane 最后重启后 API readyz、mon/mgr/OSD、Ceph 和 worker VM/PVC 观测恢复；未并发重启 [真实环境]
   2026-06-05  CORE-ROOK-CEPH-VM-STORAGE-SMOKE-A：KubeVirt VM RBD storage smoke 通过，临时 VM 挂载 Rook-Ceph RBD Block PVC，guest 看到块设备并完成写入尝试，临时 VM/PVC/PV/StorageClass 已清理 [真实环境]
